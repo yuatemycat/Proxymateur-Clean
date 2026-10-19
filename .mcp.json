@@ -5,7 +5,7 @@
       "args": [
         "serve"
       ],
-      "cwd": "E:\\02_Projects\\Antigravity-Manager",
+      "cwd": ".",
       "type": "stdio"
     },
     "agy-context-guard": {
