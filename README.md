@@ -52,7 +52,7 @@ Unlike commercial relays or bloated proxies, **Proxymateur-Clean**:
 | Capability / Feature | Clean Release (This Repo) | Personal Private Build | Why It's a Game-Changer |
 |---|:---:|:---:|---|
 | **Account Switcher + Smart Warmup** | ✅ **Included** | ✅ | Automatically warms up idle accounts to refresh 5-hour rolling and 7-day weekly reset pools without waiting for usage drops. |
-| **Reversed Internal Flags (`--enable-...`)** | ✅ **Included** | ✅ | Unlocks hidden engine capabilities: `--enable-command-antivirus`, `--disable-teamwork-forced-flash-model`, `--enable-subagent-hub`, `--enable-persistent-terminals`, `--enable-browser-subagent-v2`. |
+| **Reversed Internal Flags (`--enable-...`)** | ✅ **Included** | ✅ | Unlocks hidden engine capabilities: `--enable-deepagent`, `--enable-review`, `--enable-command-antivirus`, `--disable-teamwork-forced-flash-model`, `--enable-subagent-hub`, `--enable-persistent-terminals`, `--enable-browser-subagent-v2`. |
 | **`/swarm` (Next-Gen Multi-Agent Hub)** | ✅ **Included** | ✅ | Hands-free autonomous execution replacing `/teamwork-preview`. Never halts for trivial confirmations; mandates an internal **Tester / Verifier** self-healing loop; and keeps the parent context clean. |
 | **`/owl` (Challenger-Synthesizer Engine)** | ✅ **Included** | ✅ | Dual-agent pipeline (`DeepInvestigator` + `DeepCoder`). Doesn't just replace 'A' to fix problem 'B'—it adversarially attacks edge cases (*"what if X, Y, Z, or F happen?"*), validates invariants and compiler gates, then delivers surgical patches. |
 | **`/battle` (Colosseum Arena Duel)** | ✅ **Included** | ✅ | Pits 2 rival subagents against each other to build competing architectures, cross-critique flaws, and run empirical benchmarks to crown a victor. |
@@ -94,7 +94,17 @@ Includes the bundled productivity and agent orchestration skills in the `skills/
 - `/benchmark`: Programmatic tool synthesis and headless performance profiling.
 - `/generative_ui`: Dynamic rendering of rich interactive HTML widgets and data visualizations.
 
-### 5. 🎚️ Auto Compaction Slider & Token Governor
+### 5. 🔬 Unlocked Internal Engine Flags (`Antigravity Lab`)
+Configure and toggle hidden Google engine flags with 1-click in **Settings → Antigravity Lab**:
+- `--enable-deepagent`: Activates Google's internal multi-pass reasoning loop (`deepagent_effort`) for autonomous planning, recursive problem decomposition, and invariant verification.
+- `--enable-review`: Enables the internal automated code review persona (`review_effort`) to audit git diffs, rate change safety, and surface hidden regressions before code lands.
+- `--enable-command-antivirus`: Heuristic command assessor (`disable-command-assessor` toggle) that heuristically screens proposed shell commands against dangerous operations (e.g., recursive deletes, sandbox escapes).
+- `--disable-teamwork-forced-flash-model`: Frees subagents in multi-agent workflows from being forced onto Flash, allowing them to inherit parent Pro/Ultra models.
+- `--enable-subagent-hub`: Centralized tracking and debugging dashboard for distributed subagent lifecycles and transcripts.
+- `--enable-persistent-terminals`: Upgrades short-lived subshells to persistent ConPTY pseudo-terminals that retain background processes, daemons, and shell state across turns.
+- `--enable-browser-subagent-v2`: Activates next-generation headless browser automation connecting directly via Chrome DevTools Protocol (CDP) for DOM/network tracing.
+
+### 6. 🎚️ Auto Compaction Slider & Token Governor
 - **Interactive Threshold Slider**: Adjust the auto-compaction trigger limit from 50k to 500k tokens directly in **Settings → Antigravity Lab**.
 - **Self-Healing Trajectory**: Automatically writes `model_auto_compact_token_limit` to `~/.gemini/antigravity-cli/settings.json`, folding history when long turns or large command outputs push against the ceiling to eliminate latency spikes.
 - **1-Click GUI Installation**: Install all bundled skills and sync the token governor with a single click inside the app. Alternatively, run the scripts:
@@ -107,7 +117,7 @@ Includes the bundled productivity and agent orchestration skills in the `skills/
 bash skills/install_skills.sh
 ```
 
-### 6. 📊 Real-Time CLI Status Line (Token, Ctx & Throughput Monitor)
+### 7. 📊 Real-Time CLI Status Line (Token, Ctx & Throughput Monitor)
 - **Live Terminal Telemetry**: Seamlessly injects a dynamic, ANSI-colored statusline into Antigravity CLI via standard STDIN JSON piping:
   ```
   Gemini 3 Flash               ctx: 45.2k (4.4% of 1M) | 88 tok/s
@@ -116,7 +126,7 @@ bash skills/install_skills.sh
 - **Cross-Platform & Portable**: Lightweight Python script (`scripts/statusline.py`) supporting Windows named pipes (`PeekNamedPipe`) and POSIX (`select.select`) with zero third-party dependencies.
 - **1-Click Synchronization**: Toggle and apply with a single click inside **Settings → Antigravity Lab**, or bundle it with experimental flags and skills sync.
 
-### 7. 🤖 Native Stdio Model Context Protocol (MCP) Server
+### 8. 🤖 Native Stdio Model Context Protocol (MCP) Server
 - **Built-In MCP Runtime**: Proxymateur-Clean ships with a native, high-performance stdio MCP server compiled directly into the binary (`proxymateur mcp`).
 - **Autonomous Agent Fleet Control**: Allows external AI tools (Claude Code, Cursor, Windsurf, OpenCode, Antigravity) to inspect quotas and hot-swap active accounts dynamically:
   ```json
