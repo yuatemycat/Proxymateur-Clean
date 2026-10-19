@@ -450,6 +450,7 @@ pub async fn save_config(
     let _ = app.emit("config://updated", ());
 
     // 同步全局内存配置（无论反代服务当前是否处于运行状态）
+    crate::modules::oauth::sync_oauth_registry(&config);
     crate::proxy::update_thinking_budget_config(config.proxy.thinking_budget.clone());
     crate::proxy::update_global_system_prompt_config(config.proxy.global_system_prompt.clone());
     crate::proxy::update_demon_config(config.proxy.demon.clone());
@@ -1292,15 +1293,25 @@ pub async fn sync_cli_experiments(
 /// 安装内置的 Antigravity Slash Command 技能到 ~/.gemini/config/skills/
 #[tauri::command]
 pub async fn install_bundled_skills() -> Result<String, String> {
-    let home = dirs::home_dir().ok_or_else(|| "Failed to determine user home directory".to_string())?;
+    let home =
+        dirs::home_dir().ok_or_else(|| "Failed to determine user home directory".to_string())?;
     let skills_dir = home.join(".gemini").join("config").join("skills");
 
     let bundled_skills: &[(&str, &str)] = &[
         ("battle", include_str!("../../../skills/battle/SKILL.md")),
-        ("benchmark", include_str!("../../../skills/benchmark/SKILL.md")),
+        (
+            "benchmark",
+            include_str!("../../../skills/benchmark/SKILL.md"),
+        ),
         ("compact", include_str!("../../../skills/compact/SKILL.md")),
-        ("compaction", include_str!("../../../skills/compaction/SKILL.md")),
-        ("generative_ui", include_str!("../../../skills/generative_ui/SKILL.md")),
+        (
+            "compaction",
+            include_str!("../../../skills/compaction/SKILL.md"),
+        ),
+        (
+            "generative_ui",
+            include_str!("../../../skills/generative_ui/SKILL.md"),
+        ),
         ("owl", include_str!("../../../skills/owl/SKILL.md")),
         ("swarm", include_str!("../../../skills/swarm/SKILL.md")),
     ];
@@ -1346,7 +1357,10 @@ pub async fn set_cli_auto_compact(enabled: bool, threshold: u32) -> Result<Strin
 
     let map = json_val.as_object_mut().unwrap();
     if enabled {
-        map.insert("model_auto_compact_token_limit".to_string(), serde_json::json!(threshold));
+        map.insert(
+            "model_auto_compact_token_limit".to_string(),
+            serde_json::json!(threshold),
+        );
     } else {
         map.remove("model_auto_compact_token_limit");
     }
@@ -1379,7 +1393,10 @@ pub async fn get_cli_auto_compact() -> Result<Option<u32>, String> {
     let json_val: serde_json::Value = serde_json::from_str(&content)
         .map_err(|e| format!("Failed to parse CLI settings.json: {}", e))?;
 
-    if let Some(limit) = json_val.get("model_auto_compact_token_limit").and_then(|v| v.as_u64()) {
+    if let Some(limit) = json_val
+        .get("model_auto_compact_token_limit")
+        .and_then(|v| v.as_u64())
+    {
         Ok(Some(limit as u32))
     } else {
         Ok(None)
@@ -1389,10 +1406,10 @@ pub async fn get_cli_auto_compact() -> Result<Option<u32>, String> {
 /// 安装/配置 Antigravity CLI 状态行 (Token, Ctx, tok/s StatusLine)
 #[tauri::command]
 pub async fn set_cli_statusline(enabled: bool) -> Result<String, String> {
-    let home = dirs::home_dir().ok_or_else(|| "Failed to determine user home directory".to_string())?;
+    let home =
+        dirs::home_dir().ok_or_else(|| "Failed to determine user home directory".to_string())?;
     let cli_dir = home.join(".gemini").join("antigravity-cli");
-    std::fs::create_dir_all(&cli_dir)
-        .map_err(|e| format!("Failed to create cli dir: {}", e))?;
+    std::fs::create_dir_all(&cli_dir).map_err(|e| format!("Failed to create cli dir: {}", e))?;
 
     let statusline_script_path = cli_dir.join("statusline.py");
     let statusline_code = include_str!("../../../scripts/statusline.py");
@@ -1415,10 +1432,13 @@ pub async fn set_cli_statusline(enabled: bool) -> Result<String, String> {
     let map = json_val.as_object_mut().unwrap();
     if enabled {
         let status_cmd = format!("python \"{}\"", statusline_script_path.to_string_lossy());
-        map.insert("statusLine".to_string(), serde_json::json!({
-            "type": "command",
-            "command": status_cmd
-        }));
+        map.insert(
+            "statusLine".to_string(),
+            serde_json::json!({
+                "type": "command",
+                "command": status_cmd
+            }),
+        );
     } else {
         map.remove("statusLine");
     }
@@ -1438,8 +1458,12 @@ pub async fn set_cli_statusline(enabled: bool) -> Result<String, String> {
 /// 读取 Antigravity CLI 状态行当前配置状态
 #[tauri::command]
 pub async fn get_cli_statusline() -> Result<bool, String> {
-    let home = dirs::home_dir().ok_or_else(|| "Failed to determine user home directory".to_string())?;
-    let settings_path = home.join(".gemini").join("antigravity-cli").join("settings.json");
+    let home =
+        dirs::home_dir().ok_or_else(|| "Failed to determine user home directory".to_string())?;
+    let settings_path = home
+        .join(".gemini")
+        .join("antigravity-cli")
+        .join("settings.json");
 
     if !settings_path.exists() {
         return Ok(false);

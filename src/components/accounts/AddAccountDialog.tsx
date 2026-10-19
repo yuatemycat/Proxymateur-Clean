@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Database, Globe, FileClock, Loader2, CheckCircle2, XCircle, Copy, Check, Info, Link2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Database, Globe, FileClock, Loader2, CheckCircle2, XCircle, Copy, Check, Info, Link2, Key } from 'lucide-react';
 import { useAccountStore } from '../../stores/useAccountStore';
 import { useTranslation } from 'react-i18next';
 import { listen } from '@tauri-apps/api/event';
@@ -8,6 +9,8 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { request as invoke } from '../../utils/request';
 import { isTauri } from '../../utils/env';
 import { copyToClipboard } from '../../utils/clipboard';
+import { listOAuthClients, OAuthClientInfo } from '../../services/accountService';
+import { AppConfig } from '../../types/config';
 
 interface AddAccountDialogProps {
     onAdd: (email: string, refreshToken: string) => Promise<void>;
@@ -18,6 +21,7 @@ type Status = 'idle' | 'loading' | 'success' | 'error';
 
 function AddAccountDialog({ onAdd, showText = true }: AddAccountDialogProps) {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const fetchAccounts = useAccountStore(state => state.fetchAccounts);
     const [isOpen, setIsOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'oauth' | 'token' | 'import'>(isTauri() ? 'oauth' : 'token');
@@ -25,6 +29,11 @@ function AddAccountDialog({ onAdd, showText = true }: AddAccountDialogProps) {
     const [oauthUrl, setOauthUrl] = useState('');
     const [oauthUrlCopied, setOauthUrlCopied] = useState(false);
     const [manualCode, setManualCode] = useState('');
+
+    // OAuth Clients selection
+    const [oauthClients, setOauthClients] = useState<OAuthClientInfo[]>([]);
+    const [selectedClientKey, setSelectedClientKey] = useState<string>('');
+    const [clientsLoading, setClientsLoading] = useState(false);
 
     // UI State
     const [status, setStatus] = useState<Status>('idle');
@@ -115,13 +124,47 @@ function AddAccountDialog({ onAdd, showText = true }: AddAccountDialogProps) {
         };
     }, [completeOAuthLogin, t]);
 
-    // Pre-generate OAuth URL when dialog opens on OAuth tab (so URL is shown BEFORE "Start OAuth")
+    const loadOAuthClients = async () => {
+        setClientsLoading(true);
+        try {
+            const clients = await listOAuthClients();
+            setOauthClients(clients);
+            if (clients.length > 0) {
+                const active = clients.find(c => c.is_active)?.key || clients[0].key;
+                setSelectedClientKey(prev => {
+                    if (prev && clients.some(c => c.key === prev)) return prev;
+                    return active;
+                });
+            } else {
+                setSelectedClientKey('');
+            }
+        } catch (e) {
+            console.error('Failed to list OAuth clients:', e);
+        } finally {
+            setClientsLoading(false);
+        }
+    };
+
+    // Load available OAuth clients when dialog opens on OAuth tab
     useEffect(() => {
         if (!isOpen) return;
         if (activeTab !== 'oauth') return;
+
+        loadOAuthClients();
+    }, [isOpen, activeTab]);
+
+    // Pre-generate OAuth URL when client is selected
+    useEffect(() => {
+        if (!isOpen) return;
+        if (activeTab !== 'oauth') return;
+        if (oauthClients.length === 0) {
+            setOauthUrl('');
+            return;
+        }
+        if (!selectedClientKey) return;
         if (oauthUrl) return;
 
-        invoke<any>('prepare_oauth_url')
+        invoke<any>('prepare_oauth_url', { oauthClientKey: selectedClientKey })
             .then((res) => {
                 const url = typeof res === 'string' ? res : res?.url;
                 if (url && url.length > 0) setOauthUrl(url);
@@ -129,7 +172,36 @@ function AddAccountDialog({ onAdd, showText = true }: AddAccountDialogProps) {
             .catch((e) => {
                 console.error('Failed to prepare OAuth URL:', e);
             });
-    }, [isOpen, activeTab, oauthUrl]);
+    }, [isOpen, activeTab, selectedClientKey, oauthUrl, oauthClients.length]);
+
+    const handleClientChange = (clientKey: string) => {
+        setSelectedClientKey(clientKey);
+        setOauthUrl('');
+        setOauthUrlCopied(false);
+        cancelOAuthLogin().catch(() => { });
+    };
+
+    const handleEnableBuiltinOAuth = async () => {
+        try {
+            setStatus('loading');
+            setMessage(`${t('accounts.add.oauth.enable_builtin')}...`);
+            const curConfig = await invoke<AppConfig>('get_config');
+            const updated: AppConfig = {
+                ...curConfig,
+                oauth: {
+                    ...(curConfig.oauth || { custom_clients: [] }),
+                    enable_builtin: true,
+                },
+            };
+            await invoke('save_config', { config: updated });
+            await loadOAuthClients();
+            setStatus('idle');
+            setMessage('');
+        } catch (e) {
+            setStatus('error');
+            setMessage(String(e));
+        }
+    };
 
     // If user navigates away from OAuth tab, cancel prepared flow to release the port.
     useEffect(() => {
@@ -280,7 +352,7 @@ function AddAccountDialog({ onAdd, showText = true }: AddAccountDialogProps) {
             setMessage(t('accounts.add.oauth.btn_start') + '...');
 
             // 1. 获取 URL (指向 /auth/callback)
-            const res = await invoke<any>('prepare_oauth_url');
+            const res = await invoke<any>('prepare_oauth_url', selectedClientKey ? { oauthClientKey: selectedClientKey } : undefined);
             const url = typeof res === 'string' ? res : res.url;
 
             if (!url) {
@@ -349,7 +421,11 @@ function AddAccountDialog({ onAdd, showText = true }: AddAccountDialogProps) {
         }
         // Default flow: opens the default browser and completes automatically.
         // (If user opened the URL manually, completion is also triggered by oauth-callback-received.)
-        handleAction(t('accounts.add.tabs.oauth'), startOAuthLogin, { clearOauthUrl: false });
+        handleAction(
+            t('accounts.add.tabs.oauth'),
+            () => startOAuthLogin(selectedClientKey || undefined),
+            { clearOauthUrl: false }
+        );
     };
 
     const handleCompleteOAuth = () => {
@@ -539,26 +615,120 @@ function AddAccountDialog({ onAdd, showText = true }: AddAccountDialogProps) {
                         <div className="min-h-[200px]">
                             {/* OAuth 授权 */}
                             {activeTab === 'oauth' && (
-                                <div className="space-y-6 py-4">
-                                    <div className="text-center space-y-3">
-                                        <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-full w-20 h-20 mx-auto flex items-center justify-center">
-                                            <Globe className="w-10 h-10 text-blue-500" />
+                                <div className="space-y-5 py-2">
+                                    <div className="text-center space-y-2">
+                                        <div className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-full w-16 h-16 mx-auto flex items-center justify-center">
+                                            <Globe className="w-8 h-8 text-blue-500" />
                                         </div>
                                         <div className="space-y-1">
                                             <h4 className="font-medium text-gray-900 dark:text-gray-100">{t('accounts.add.oauth.recommend')}</h4>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
                                                 {t('accounts.add.oauth.desc')}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="space-y-3">
-                                        <button
-                                            className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-                                            onClick={handleOAuth}
-                                            disabled={status === 'loading' || status === 'success'}
-                                        >
-                                            {status === 'loading' ? t('accounts.add.oauth.btn_waiting') : t('accounts.add.oauth.btn_start')}
-                                        </button>
+
+                                    {/* Empty State: No OAuth clients configured */}
+                                    {oauthClients.length === 0 && !clientsLoading && (
+                                        <div className="p-4 rounded-xl border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/20 text-left space-y-2">
+                                            <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 text-xs font-bold">
+                                                <Key size={14} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                                                <span>{t('accounts.add.oauth.no_clients_title', 'No OAuth Clients Configured')}</span>
+                                            </div>
+                                            <p className="text-xs text-amber-800 dark:text-amber-300/80 leading-relaxed">
+                                                {t('accounts.add.oauth.no_clients_desc', 'The built-in OAuth client is disabled in Settings, and no custom BYO OAuth clients are configured.')}
+                                            </p>
+                                            <div className="flex flex-wrap gap-2 pt-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleEnableBuiltinOAuth}
+                                                    disabled={status === 'loading'}
+                                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
+                                                >
+                                                    {t('accounts.add.oauth.enable_builtin', 'Enable Built-in OAuth')}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setIsOpen(false);
+                                                        navigate('/settings');
+                                                    }}
+                                                    className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-base-200 text-gray-700 dark:text-gray-200 rounded-lg text-xs font-medium transition-colors"
+                                                >
+                                                    {t('accounts.add.oauth.go_to_settings', 'Configure in Settings')}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Multiple Clients: Choice dropdown */}
+                                    {oauthClients.length > 1 && (
+                                        <div className="space-y-1.5 text-left">
+                                            <div className="flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-300">
+                                                <span className="flex items-center gap-1.5">
+                                                    <Key size={13} className="text-blue-500" />
+                                                    {t('accounts.add.oauth.select_client', 'OAuth Client')}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setIsOpen(false);
+                                                        navigate('/settings');
+                                                    }}
+                                                    className="text-[11px] font-normal text-blue-600 dark:text-blue-400 hover:underline"
+                                                >
+                                                    {t('settings.tabs.oauth', 'Manage Clients')}
+                                                </button>
+                                            </div>
+                                            <select
+                                                className="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-base-200 text-gray-900 dark:text-base-content focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                                                value={selectedClientKey}
+                                                onChange={(e) => handleClientChange(e.target.value)}
+                                                disabled={status === 'loading'}
+                                            >
+                                                {oauthClients.map((client) => (
+                                                    <option key={client.key} value={client.key}>
+                                                        {client.label} {client.is_builtin ? `(${t('common.builtin', 'Built-in')})` : `(${t('common.custom', 'Custom')})`}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    {/* Single Client: Informative badge */}
+                                    {oauthClients.length === 1 && (
+                                        <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-base-200 px-3.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700">
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                <Key size={13} className="text-blue-500 shrink-0" />
+                                                <span className="truncate">{t('accounts.add.oauth.client_label', 'OAuth Client:')} <strong>{oauthClients[0].label}</strong></span>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0 ml-2">
+                                                <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-gray-200 dark:bg-base-300 font-mono">
+                                                    {oauthClients[0].is_builtin ? t('common.builtin', 'Built-in') : t('common.custom', 'Custom')}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setIsOpen(false);
+                                                        navigate('/settings');
+                                                    }}
+                                                    className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline"
+                                                >
+                                                    {t('common.edit', 'Edit')}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {oauthClients.length > 0 && (
+                                        <div className="space-y-3">
+                                            <button
+                                                className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                                                onClick={handleOAuth}
+                                                disabled={status === 'loading' || status === 'success'}
+                                            >
+                                                {status === 'loading' ? t('accounts.add.oauth.btn_waiting') : t('accounts.add.oauth.btn_start')}
+                                            </button>
 
                                         {oauthUrl && (
                                             <div className="space-y-2">
@@ -622,6 +792,7 @@ function AddAccountDialog({ onAdd, showText = true }: AddAccountDialogProps) {
                                             </div>
                                         </div>
                                     </div>
+                                    )}
                                 </div>
                             )}
 

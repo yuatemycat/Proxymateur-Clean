@@ -8,7 +8,9 @@ pub use account::{
     Account, AccountExportItem, AccountExportResponse, AccountIndex, AccountSummary, DeviceProfile,
     DeviceProfileVersion,
 };
-pub use config::{AntigravityLabConfig, AppConfig, CircuitBreakerConfig, QuotaProtectionConfig};
+pub use config::{
+    AppConfig, CircuitBreakerConfig, CustomOAuthClient, OAuthConfig, QuotaProtectionConfig,
+};
 pub use official_model::{OfficialModelCatalog, OfficialModelInfo};
 pub use quota::QuotaData;
 pub use token::TokenData;

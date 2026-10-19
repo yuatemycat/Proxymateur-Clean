@@ -2102,7 +2102,9 @@ pub fn extract_body_session_id(body: Option<&Value>) -> Option<String> {
             }
         }
     }
-    if let Some(conv_id) = crate::proxy::session_manager::extract_embedded_conversation_id_from_value(body) {
+    if let Some(conv_id) =
+        crate::proxy::session_manager::extract_embedded_conversation_id_from_value(body)
+    {
         let sanitized = sanitize_session_id(&conv_id);
         if !sanitized.is_empty() && sanitized != "sid-unknown" {
             return Some(sanitized);

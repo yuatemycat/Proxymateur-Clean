@@ -126,6 +126,11 @@ export async function setActiveOAuthClient(clientKey: string): Promise<void> {
     return await invoke('set_active_oauth_client', { clientKey });
 }
 
+export async function prepareOAuthUrl(oauthClientKey?: string): Promise<string> {
+    const res = await invoke<any>('prepare_oauth_url', oauthClientKey ? { oauthClientKey } : undefined);
+    return typeof res === 'string' ? res : res?.url || '';
+}
+
 // 导入
 export async function importV1Accounts(): Promise<Account[]> {
     return await invoke('import_v1_accounts');

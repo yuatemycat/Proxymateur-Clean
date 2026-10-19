@@ -51,10 +51,49 @@ pub struct AppConfig {
     pub multi_instance_mode: bool, // [NEW] 多开模式：切换 2.0 GUI 时启动新窗口而不关闭旧窗口
     #[serde(default)]
     pub antigravity_lab: AntigravityLabConfig,
+    #[serde(default)]
+    pub oauth: OAuthConfig,
 }
 
 fn default_quiet_autostart() -> bool {
     true
+}
+
+/// Custom OAuth client entry (BYO OAuth)
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CustomOAuthClient {
+    pub key: String,
+    pub label: String,
+    pub client_id: String,
+    pub client_secret: String,
+}
+
+/// OAuth configuration supporting built-in and custom BYO credentials
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct OAuthConfig {
+    /// Whether to enable the built-in official Google OAuth client
+    #[serde(default = "default_enable_builtin_oauth")]
+    pub enable_builtin: bool,
+    /// List of custom BYO OAuth clients
+    #[serde(default)]
+    pub custom_clients: Vec<CustomOAuthClient>,
+    /// Optional active default OAuth client key
+    #[serde(default)]
+    pub active_client_key: Option<String>,
+}
+
+fn default_enable_builtin_oauth() -> bool {
+    true
+}
+
+impl Default for OAuthConfig {
+    fn default() -> Self {
+        Self {
+            enable_builtin: true,
+            custom_clients: Vec::new(),
+            active_client_key: None,
+        }
+    }
 }
 
 /// Scheduled warmup configuration
@@ -396,6 +435,7 @@ impl AppConfig {
             dismissed_thinking_cleanup_version: None,
             multi_instance_mode: false,
             antigravity_lab: AntigravityLabConfig::default(),
+            oauth: OAuthConfig::default(),
         }
     }
 }

@@ -11,6 +11,7 @@ import SmartWarmup from '../components/settings/SmartWarmup';
 import PinnedQuotaModels from '../components/settings/PinnedQuotaModels';
 import LowQuotaAlertSettings from '../components/settings/LowQuotaAlertSettings';
 import AntigravityLabSettings from '../components/settings/AntigravityLabSettings';
+import OAuthSettings from '../components/settings/OAuthSettings';
 import { useDebugConsole } from '../stores/useDebugConsole';
 
 import { useTranslation } from 'react-i18next';
@@ -42,8 +43,8 @@ function Settings() {
     const { t } = useTranslation();
     const { config, loadConfig, saveConfig, updateTheme } = useConfigStore();
     const { enable, disable, isEnabled } = useDebugConsole();
-    const [activeTab, setActiveTab] = useState<'general' | 'account' | 'advanced' | 'debug' | 'about'>('general');
-    const [appVersion, setAppVersion] = useState<string>('1.0.0');
+    const [activeTab, setActiveTab] = useState<'general' | 'account' | 'oauth' | 'advanced' | 'debug' | 'about'>('general');
+    const [appVersion, setAppVersion] = useState<string>('1.0.1');
     const [formData, setFormData] = useState<AppConfig>({
         language: 'en',
         theme: 'system',
@@ -520,6 +521,15 @@ function Settings() {
                             {t('settings.tabs.account')}
                         </button>
                         <button
+                            className={`px-5 py-2.5 rounded-none text-xs font-black uppercase tracking-[0.18em] transition-colors border-b-4 -mb-1 ${activeTab === 'oauth'
+                                ? 'bg-base-content text-base-100 border-base-content'
+                                : 'text-base-content/60 border-transparent hover:text-base-content hover:border-lime-signal'
+                                }`}
+                            onClick={() => startTransition(() => setActiveTab('oauth'))}
+                        >
+                            {t('settings.tabs.oauth', 'OAuth')}
+                        </button>
+                        <button
                             className={`px-5 py-2.5 rounded-none text-xs font-black uppercase tracking-[0.18em] transition-colors border-b-4 -mb-1 ${activeTab === 'advanced'
                                 ? 'bg-base-content text-base-100 border-base-content'
                                 : 'text-base-content/60 border-transparent hover:text-base-content hover:border-lime-signal'
@@ -994,7 +1004,45 @@ function Settings() {
                                     })}
                                 />
                             </div>
+
+                            {/* OAuth 凭据管理导航卡片 */}
+                            <div className="mt-8 pt-4 border-t-2 border-base-content flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-base-content/[0.03] border border-base-content/20">
+                                <div>
+                                    <div className="text-sm font-black uppercase tracking-wide text-base-content">
+                                        {t('settings.oauth.title', 'OAuth Configuration')}
+                                    </div>
+                                    <p className="text-xs text-base-content/60 mt-0.5">
+                                        {t('settings.oauth.desc', 'Manage built-in and Bring-Your-Own (BYO) Google Cloud OAuth 2.0 credentials for account authorization.')}
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => startTransition(() => setActiveTab('oauth'))}
+                                    className="px-4 py-2 text-xs font-black uppercase tracking-wider bg-base-content text-base-100 hover:opacity-90 shrink-0 self-start sm:self-auto"
+                                >
+                                    {t('settings.tabs.oauth', 'OAuth')}
+                                </button>
+                            </div>
                         </div>
+                    )}
+
+                    {/* OAuth 设置 */}
+                    {activeTab === 'oauth' && (
+                        <OAuthSettings
+                            config={formData.oauth}
+                            onChange={async (newOAuthConfig) => {
+                                const newFormData = {
+                                    ...formData,
+                                    oauth: newOAuthConfig,
+                                };
+                                setFormData(newFormData);
+                                try {
+                                    await saveConfig(newFormData);
+                                } catch (error) {
+                                    showToast(`${t('common.error')}: ${error}`, 'error');
+                                }
+                            }}
+                        />
                     )}
 
                     {/* 高级设置 */}

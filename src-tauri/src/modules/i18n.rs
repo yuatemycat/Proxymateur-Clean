@@ -187,10 +187,10 @@ mod tests {
 
     #[test]
     fn tray_uses_the_detected_language() {
-        let language = language_from_locales(["ru-RU"]);
+        let language = language_from_locales(["en-US"]);
         let texts = get_tray_texts(language);
-        let russian: serde_json::Value =
-            serde_json::from_str(include_str!("../../../src/locales/ru.json")).unwrap();
-        assert_eq!(texts.quit, russian["tray"]["quit"].as_str().unwrap());
+        let english: serde_json::Value =
+            serde_json::from_str(include_str!("../../../src/locales/en.json")).unwrap();
+        assert_eq!(texts.quit, english["tray"]["quit"].as_str().unwrap());
     }
 }

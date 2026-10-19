@@ -1076,11 +1076,7 @@ pub fn inject_gateway_env(cmd: &mut std::process::Command) {
                 cmd.env("AGY_LLM_GATEWAY_API_KEY", key);
             }
 
-            let is_argon_only = config
-                .proxy
-                .gateway_routing_mode
-                .as_deref()
-                == Some("argon_only")
+            let is_argon_only = config.proxy.gateway_routing_mode.as_deref() == Some("argon_only")
                 || mode_override == "argon_only";
 
             // 快速探测本地反代 /v1/models (超时 1.5s)，获取当前可达模型列表

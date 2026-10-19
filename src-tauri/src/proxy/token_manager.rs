@@ -1690,7 +1690,10 @@ impl TokenManager {
             entry.project_id = Some(fallback.clone());
         }
 
-        if !self.load_code_assist_inflight.contains_key(&token.account_id) {
+        if !self
+            .load_code_assist_inflight
+            .contains_key(&token.account_id)
+        {
             let (_tx, rx) = tokio::sync::watch::channel(None);
             self.load_code_assist_inflight
                 .insert(token.account_id.clone(), rx);
@@ -1721,8 +1724,7 @@ impl TokenManager {
                             let Ok(raw) = std::fs::read_to_string(&write_path) else {
                                 return;
                             };
-                            let Ok(mut val) =
-                                serde_json::from_str::<serde_json::Value>(&raw)
+                            let Ok(mut val) = serde_json::from_str::<serde_json::Value>(&raw)
                             else {
                                 return;
                             };
@@ -1958,7 +1960,8 @@ impl TokenManager {
                             && scheduling.mode != SchedulingMode::PerformanceFirst
                         {
                             let sid = session_id.unwrap();
-                            if let Some(bound_id) = self.session_accounts.get(sid).map(|v| v.clone())
+                            if let Some(bound_id) =
+                                self.session_accounts.get(sid).map(|v| v.clone())
                             {
                                 if &bound_id != pref_id {
                                     if let Some(bound_token) =
@@ -3428,7 +3431,10 @@ impl TokenManager {
         let cb_config = self.circuit_breaker_config.clone();
 
         tokio::spawn(async move {
-            tracing::debug!("账号 {} 正在后台异步刷新实时配额以校准冷却时间...", email_owned);
+            tracing::debug!(
+                "账号 {} 正在后台异步刷新实时配额以校准冷却时间...",
+                email_owned
+            );
             if let Ok((quota_data, _project_id)) =
                 crate::modules::quota::fetch_quota(&access_token, &email_owned, Some(&account_id))
                     .await

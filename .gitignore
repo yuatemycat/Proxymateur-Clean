@@ -82,3 +82,4 @@ testJson/
 
 # Generated Ghidra / pyghidra-mcp scratch projects
 pyghidra_mcp_projects/
+scratch/

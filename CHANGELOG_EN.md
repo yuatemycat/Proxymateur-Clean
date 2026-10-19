@@ -3,6 +3,13 @@
 > Complete version history for Antigravity Tools. Return to project home at [README.md](README.md).
 
 *   **Version History**:
+    *   **v1.0.1 (2026-10-19)**:
+        -   **[Authentication & OAuth Governance] Restored Built-in Antigravity OAuth and Added Multi-Client Bring-Your-Own (BYO) Selection Engine**:
+            -   **Canonical Built-in OAuth Credentials Restored**: Restored default Antigravity Enterprise Google OAuth client credentials (`1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com`), resolving the `OAuth failed: No OAuth clients configured` error out of the box.
+            -   **User Choice and Sovereignty Controls**: Introduced a dedicated OAuth configuration settings tab with a master toggle for built-in OAuth, full CRUD support for custom Bring-Your-Own (BYO) Google Cloud OAuth clients (`client_id`, `client_secret`, key, label), and active client selection.
+            -   **Dynamic In-Memory Registry Hot-Reload**: Rebuilt the OAuth registry to dynamically synchronize configuration upon save without requiring application restarts, with full support for environment variable overrides (`ANTIGRAVITY_OAUTH_CLIENTS`, `ANTIGRAVITY_OAUTH_CLIENT_KEY`).
+            -   **Add Account Dialog Polish**: Added a multi-client selector in the Add Account dialog, informative active client badges, and a graceful empty state with a 1-click "Enable Built-in OAuth" recovery action.
+
     *   **v1.0.0 (2026-10-19)**:
         -   **[Inaugural Clean Release] Sovereign Client-Side Antigravity Studio (Yuatemycat)**:
             -   **100% Client-Side Sovereignty**: Pure BYO (Bring-Your-Own) Google Cloud OAuth 2.0 flow with zero background proxy listeners, zero network relays, and zero credential leakage.

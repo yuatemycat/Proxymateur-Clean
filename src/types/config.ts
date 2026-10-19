@@ -269,6 +269,24 @@ export interface AppConfig {
     suggestion_delete_thinking_store?: boolean; // [NEW] 建议删除历史思考块缓存开关
     thinking_cleanup_dismissed?: boolean; // [NEW] 用户是否已确认/忽略该建议
     dismissed_thinking_cleanup_version?: string; // [NEW] 用户已确认或忽略建议的目标版本号
+    oauth?: OAuthConfig; // [NEW] OAuth 凭据配置 (内置与自定义 BYO)
+}
+
+// ============================================================================
+// OAuth 配置类型定义
+// ============================================================================
+
+export interface CustomOAuthClient {
+    key: string;
+    label: string;
+    client_id: string;
+    client_secret: string;
+}
+
+export interface OAuthConfig {
+    enable_builtin: boolean;
+    custom_clients: CustomOAuthClient[];
+    active_client_key?: string;
 }
 
 // ============================================================================

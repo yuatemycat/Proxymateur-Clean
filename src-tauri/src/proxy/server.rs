@@ -1651,12 +1651,26 @@ async fn admin_refresh_all_quotas() -> Result<impl IntoResponse, (StatusCode, Js
 
 // --- OAuth Handlers ---
 
+#[derive(Deserialize, Default)]
+struct OAuthStartPayload {
+    #[serde(
+        default,
+        alias = "client_key",
+        alias = "clientKey",
+        alias = "oauth_client_key",
+        alias = "oauthClientKey"
+    )]
+    oauth_client_key: Option<String>,
+}
+
 async fn admin_prepare_oauth_url(
     State(state): State<AppState>,
+    payload: Option<Json<OAuthStartPayload>>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
+    let client_key = payload.and_then(|Json(p)| p.oauth_client_key);
     let url = state
         .account_service
-        .prepare_oauth_url(None)
+        .prepare_oauth_url(client_key)
         .await
         .map_err(|e| {
             (
@@ -1669,10 +1683,12 @@ async fn admin_prepare_oauth_url(
 
 async fn admin_start_oauth_login(
     State(state): State<AppState>,
+    payload: Option<Json<OAuthStartPayload>>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
+    let client_key = payload.and_then(|Json(p)| p.oauth_client_key);
     let account = state
         .account_service
-        .start_oauth_login(None)
+        .start_oauth_login(client_key)
         .await
         .map_err(|e| {
             (
@@ -1914,6 +1930,7 @@ async fn admin_save_config(
     }
 
     // 同步全局内存配置（热更新思考预算、系统提示词、图像思考模式与审计策略）
+    crate::modules::oauth::sync_oauth_registry(&new_config);
     crate::proxy::update_thinking_budget_config(new_config.proxy.thinking_budget.clone());
     crate::proxy::update_global_system_prompt_config(new_config.proxy.global_system_prompt.clone());
     crate::proxy::update_demon_config(new_config.proxy.demon.clone());

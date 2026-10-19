@@ -113,13 +113,16 @@ impl SessionManager {
                 crate::proxy::mappers::claude::models::SystemPrompt::String(s) => {
                     extract_embedded_conversation_id(s)
                 }
-                crate::proxy::mappers::claude::models::SystemPrompt::Array(blocks) => {
-                    blocks.iter().find_map(|b| extract_embedded_conversation_id(&b.text))
-                }
+                crate::proxy::mappers::claude::models::SystemPrompt::Array(blocks) => blocks
+                    .iter()
+                    .find_map(|b| extract_embedded_conversation_id(&b.text)),
             };
             if let Some(conv_id) = found_id {
                 let sid = format!("sid-{}", &conv_id[..conv_id.len().min(32)]);
-                tracing::debug!("[SessionManager] Anchored to embedded Conversation ID: {}", sid);
+                tracing::debug!(
+                    "[SessionManager] Anchored to embedded Conversation ID: {}",
+                    sid
+                );
                 return sid;
             }
         }
@@ -346,7 +349,10 @@ impl SessionManager {
         // 直接以此作为恒定锚点，免疫上下文裁剪、滚动和重置，100% 保持上游 KV-Cache 命中。
         if let Some(conv_id) = extract_embedded_conversation_id_from_value(request) {
             let sid = format!("sid-{}", &conv_id[..conv_id.len().min(32)]);
-            tracing::debug!("[SessionManager-Gemini] Anchored to embedded Conversation ID: {}", sid);
+            tracing::debug!(
+                "[SessionManager-Gemini] Anchored to embedded Conversation ID: {}",
+                sid
+            );
             return sid;
         }
 
