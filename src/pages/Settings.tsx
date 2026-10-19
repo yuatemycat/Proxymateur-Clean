@@ -1200,7 +1200,7 @@ function Settings() {
                                             type="text"
                                             className="input input-sm flex-1 rounded-none border border-base-content/40 bg-base-200 text-base-content font-medium focus:outline-none focus:border-base-content"
                                             value={formData.antigravity_ide_executable || ''}
-                                            placeholder={t('settings.advanced.antigravity_ide_path_placeholder', 'D:\\Antigravity\\Antigravity.exe')}
+                                            placeholder={t('settings.advanced.antigravity_ide_path_placeholder', 'C:\\Program Files\\Google\\Antigravity\\Antigravity.exe')}
                                             onChange={(e) => setFormData({ ...formData, antigravity_ide_executable: e.target.value })}
                                         />
                                         {formData.antigravity_ide_executable && (

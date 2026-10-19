@@ -649,7 +649,7 @@
       "antigravity_cli_path_select": "Select Antigravity CLI (agy) Executable",
       "antigravity_cli_path_detected": "Detected CLI path updated",
       "antigravity_ide_path": "Antigravity IDE Path",
-      "antigravity_ide_path_placeholder": "D:\\Antigravity\\Antigravity.exe",
+      "antigravity_ide_path_placeholder": "C:\\Program Files\\Google\\Antigravity\\Antigravity.exe",
       "antigravity_ide_path_desc": "Specify the executable path for Antigravity IDE (code editor). Once set, account switching will strictly protect processes at this path from being terminated.",
       "antigravity_ide_path_select": "Select Antigravity IDE Executable",
       "detect_btn": "Detect",
