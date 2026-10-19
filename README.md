@@ -92,6 +92,26 @@ bash skills/install_skills.sh
 - **Cross-Platform & Portable**: Lightweight Python script (`scripts/statusline.py`) supporting Windows named pipes (`PeekNamedPipe`) and POSIX (`select.select`) with zero third-party dependencies.
 - **1-Click Synchronization**: Toggle and apply with a single click inside **Settings → Antigravity Lab**, or bundle it with experimental flags and skills sync.
 
+### 7. 🤖 Native Stdio Model Context Protocol (MCP) Server
+- **Built-In MCP Runtime**: Proxymateur-Clean ships with a native, high-performance stdio MCP server compiled directly into the binary (`proxymateur mcp`).
+- **Autonomous Agent Fleet Control**: Allows external AI tools (Claude Code, Cursor, Windsurf, OpenCode, Antigravity) to inspect quotas and hot-swap active accounts dynamically:
+  ```json
+  {
+    "mcpServers": {
+      "proxymateur": {
+        "command": "proxymateur",
+        "args": ["mcp"]
+      }
+    }
+  }
+  ```
+- **Supported MCP Tools**:
+  - `list_accounts`: Query all configured accounts, active tiers (`PRO`, `ULTRA`), and Gemini/Claude quota summaries.
+  - `read_quotas`: Inspect granular model capacity, remaining token fractions, 5h rolling countdowns, and 7d reset times.
+  - `get_current_account`: Query the active session identity.
+  - `switch_account`: Hot-swaps the active Antigravity account mid-conversation without interrupting workflows.
+  - `agy_run_task` & `agy_get_transcript`: Execute and inspect background CLI sessions programmatically.
+
 ---
 
 ## 🔑 Bring-Your-Own (BYO) OAuth 2.0 Setup
