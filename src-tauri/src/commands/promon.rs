@@ -133,17 +133,28 @@ pub fn get_or_create_promon_hud(app: &AppHandle) -> Result<tauri::WebviewWindow,
     if let Some(window) = app.get_webview_window("promon-hud") {
         Ok(window)
     } else {
-        tauri::WebviewWindowBuilder::new(app, "promon-hud", tauri::WebviewUrl::App("/hud".into()))
-            .title("Promon HUD")
-            .inner_size(780.0, 340.0)
-            .decorations(false)
-            .transparent(true)
-            .always_on_top(true)
-            .center()
-            .skip_taskbar(true)
-            .resizable(false)
-            .shadow(false)
-            .visible(false)
+        #[allow(unused_mut)]
+        let mut builder = tauri::WebviewWindowBuilder::new(
+            app,
+            "promon-hud",
+            tauri::WebviewUrl::App("/hud".into()),
+        )
+        .title("Promon HUD")
+        .inner_size(780.0, 340.0)
+        .decorations(false)
+        .always_on_top(true)
+        .center()
+        .skip_taskbar(true)
+        .resizable(false)
+        .shadow(false)
+        .visible(false);
+
+        #[cfg(any(not(target_os = "macos"), feature = "macos-private-api"))]
+        {
+            builder = builder.transparent(true);
+        }
+
+        builder
             .build()
             .map_err(|e| format!("Failed to create Promon HUD window: {}", e))
     }

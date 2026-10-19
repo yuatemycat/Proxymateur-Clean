@@ -539,19 +539,17 @@ pub fn run() {
             modules::log_bridge::init_log_bridge(app.handle().clone());
 
             // 为主窗口显式设置应用图标（强制触发 Win32 WM_SETICON，防止透明/覆盖标题栏窗口在任务栏丢失图标）
+            #[cfg(not(target_os = "macos"))]
             if let Some(window) = app.get_webview_window("main") {
-                #[cfg(not(target_os = "macos"))]
-                {
-                    let icon_bytes: &[u8] = include_bytes!("../icons/icon.png");
-                    if let Ok(img) = image::load_from_memory(icon_bytes) {
-                        let rgba = img.to_rgba8();
-                        let (width, height) = rgba.dimensions();
-                        let _ = window.set_icon(tauri::image::Image::new_owned(
-                            rgba.into_raw(),
-                            width,
-                            height,
-                        ));
-                    }
+                let icon_bytes: &[u8] = include_bytes!("../icons/icon.png");
+                if let Ok(img) = image::load_from_memory(icon_bytes) {
+                    let rgba = img.to_rgba8();
+                    let (width, height) = rgba.dimensions();
+                    let _ = window.set_icon(tauri::image::Image::new_owned(
+                        rgba.into_raw(),
+                        width,
+                        height,
+                    ));
                 }
             }
 
