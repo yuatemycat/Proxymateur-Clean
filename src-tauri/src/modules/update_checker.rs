@@ -4,13 +4,13 @@ use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const GITHUB_API_URL: &str =
-    "https://api.github.com/repos/52191314/Antigravity-Manager/releases/latest";
+    "https://api.github.com/repos/yuatemycat/Proxymateur-Clean/releases/latest";
 const GITHUB_RELEASES_API_URL: &str =
-    "https://api.github.com/repos/52191314/Antigravity-Manager/releases?per_page=15";
+    "https://api.github.com/repos/yuatemycat/Proxymateur-Clean/releases?per_page=15";
 const GITHUB_RAW_URL: &str =
-    "https://raw.githubusercontent.com/52191314/Antigravity-Manager/main/package.json";
+    "https://raw.githubusercontent.com/yuatemycat/Proxymateur-Clean/main/package.json";
 const JSDELIVR_URL: &str =
-    "https://cdn.jsdelivr.net/gh/52191314/Antigravity-Manager@main/package.json";
+    "https://cdn.jsdelivr.net/gh/yuatemycat/Proxymateur-Clean@main/package.json";
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const DEFAULT_CHECK_INTERVAL_HOURS: u64 = 24;
 
@@ -93,9 +93,9 @@ struct GitHubReleaseAsset {
 }
 
 pub const STABLE_UPDATER_JSON_URL: &str =
-    "https://github.com/52191314/Antigravity-Manager/releases/latest/download/updater.json";
+    "https://github.com/yuatemycat/Proxymateur-Clean/releases/latest/download/updater.json";
 pub const PREVIEW_UPDATER_JSON_URL: &str =
-    "https://github.com/52191314/Antigravity-Manager/releases/download/preview/updater.json";
+    "https://github.com/yuatemycat/Proxymateur-Clean/releases/download/preview/updater.json";
 
 pub fn get_upstream_proxy_url() -> Option<String> {
     if let Ok(config) = crate::modules::config::load_app_config() {
@@ -489,7 +489,7 @@ async fn check_static_url(url: &str, source_name: &str) -> Result<UpdateInfo, St
 
     // fallback sources generally don't provide release notes or download specific URL, construct generic
     let download_url =
-        "https://github.com/52191314/Antigravity-Manager/releases/latest".to_string();
+        "https://github.com/yuatemycat/Proxymateur-Clean/releases/latest".to_string();
     let release_notes = format!(
         "New version detected via {}. Please check release page for details.",
         source_name

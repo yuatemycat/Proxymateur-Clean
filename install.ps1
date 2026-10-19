@@ -1,5 +1,5 @@
 # Proxymateur Install Script for Windows
-# Usage: irm https://raw.githubusercontent.com/52191314/Antigravity-Manager/main/install.ps1 | iex
+# Usage: irm https://raw.githubusercontent.com/yuatemycat/Proxymateur-Clean/main/install.ps1 | iex
 #
 # Parameters (set before running):
 #   $Version = "4.2.2"  # Install specific version
@@ -10,7 +10,7 @@ if (-not $DryRun) { $DryRun = $false }
 
 $ErrorActionPreference = "Continue"
 
-$Repo = "52191314/Antigravity-Manager"
+$Repo = "yuatemycat/Proxymateur-Clean"
 $AppName = "Proxymateur"
 $GithubApi = "https://api.github.com/repos/$Repo/releases"
 $script:ReleaseVersion = ""

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Proxymateur Install Script (Linux + macOS)
-# Usage: curl -fsSL https://raw.githubusercontent.com/52191314/Antigravity-Manager/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/yuatemycat/Proxymateur-Clean/main/install.sh | bash
 #
 # Environment variables:
 #   VERSION     - Install specific version (e.g., "4.1.20"), default: latest
@@ -15,9 +15,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-REPO="52191314/Antigravity-Manager"
+REPO="yuatemycat/Proxymateur-Clean"
 APP_NAME="Proxymateur"
-APP_ID="com.proxymateur.app"
+APP_ID="com.proxymateur.clean"
 GITHUB_API="https://api.github.com/repos/${REPO}/releases"
 
 # Helper functions
