@@ -85,6 +85,7 @@ if (!curSem) {
 const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run') || process.env.npm_config_dry_run === 'true';
 const autoCommit = args.includes('--commit') || process.env.npm_config_commit === 'true';
+const isForce = args.includes('--force') || process.env.npm_config_force === 'true';
 const targetArg = args.find(a => !a.startsWith('--'));
 
 if (!targetArg) {
@@ -151,6 +152,9 @@ const isPrerelease = Boolean(nextSem.prerelease);
 
 // 4. 防呆校验逻辑 (支持双版本发布与预发布转正)
 function validateVersionUpgrade(next, cur) {
+    if (isForce) {
+        return { valid: true, note: '强制指定目标版本号 (--force)' };
+    }
     if (next.raw === cur.raw) {
         return { valid: false, reason: `目标版本号 [${next.raw}] 与当前版本号完全一致，无需重复升级！` };
     }

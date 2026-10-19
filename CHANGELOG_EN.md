@@ -3,6 +3,15 @@
 > Complete version history for Antigravity Tools. Return to project home at [README.md](README.md).
 
 *   **Version History**:
+    *   **v1.0.0 (2026-10-19)**:
+        -   **[Inaugural Clean Release] Sovereign Client-Side Antigravity Studio (Yuatemycat)**:
+            -   **100% Client-Side Sovereignty**: Pure BYO (Bring-Your-Own) Google Cloud OAuth 2.0 flow with zero background proxy listeners, zero network relays, and zero credential leakage.
+            -   **Strict Quota Decoupling**: Gemini 2.5/Flash and Claude 3P quota pools are completely decoupled; Claude weekly exhaustion never degrades Gemini readiness or sorting priority.
+            -   **Reversed Internal Engine Flags**: Direct GUI toggles in Antigravity Lab for `--enable-deepagent`, `--enable-review`, `--enable-command-antivirus`, `--disable-teamwork-forced-flash-model`, `--enable-subagent-hub`, and `--enable-persistent-terminals`.
+            -   **Bundled Agent Skills**: Ships `/owl`, `/swarm`, `/battle`, `/benchmark`, `/compact`, and `/generative_ui`.
+            -   **Real-Time Token Statusline**: Live terminal telemetry (`ctx: 45.2k (4.4% of 1M) | 88 tok/s`) and configurable Auto-Compaction Slider (50k–500k tokens).
+            -   **Native Stdio MCP Server**: Built-in `proxymateur mcp` runtime for programmatic quota inspection and account hot-swapping.
+
     *   **v4.9.5 (2026-10-05)**:
         -   **[Feature Category] Main Update Summary (PR #xxx)**:
             -   **Description**: Please document update details here; credit external contributors inline as `(Thanks to @username)`.

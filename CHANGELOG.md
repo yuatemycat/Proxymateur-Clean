@@ -3,6 +3,15 @@
 > 完整版本历史记录。返回项目主页请查看 [README_ZH.md](README_ZH.md) | [English Changelog](CHANGELOG_EN.md)。
 
 *   **版本演进**:
+    *   **v1.0.0 (2026-10-19)**:
+        -   **[首发纯净版发布] 100% 客户端主权 Antigravity Studio (Yuatemycat)**:
+            -   **完全客户端主权 (BYO OAuth)**: 纯粹的自带凭据 (BYO) Google Cloud OAuth 2.0 认证流，无后台代理中继监听、无端口劫持、零凭证泄漏风险。
+            -   **严格配额解耦**: 彻底解耦 Gemini 2.5/Flash 与 Claude 3P 配额池，Claude 周配额耗尽绝不影响 Gemini 可用性评估或排序权重。
+            -   **逆向内部隐藏引擎特性**: 在 Antigravity Lab 中一键切换 `--enable-deepagent`、`--enable-review`、`--enable-command-antivirus`、`--disable-teamwork-forced-flash-model`、`--enable-subagent-hub` 及 `--enable-persistent-terminals`。
+            -   **内置效率技能集**: 默认捆绑 `/owl`、`/swarm`、`/battle`、`/benchmark`、`/compact` 及 `/generative_ui`。
+            -   **实时终端状态行**: 终端动态彩色状态栏 (`ctx: 45.2k (4.4% of 1M) | 88 tok/s`) 与上下文自动折叠滑块 (50k–500k tokens)。
+            -   **原生 Stdio MCP 服务**: 内置 `proxymateur mcp` 命令，供外部 Agent (Claude Code, Cursor, OpenCode, Antigravity) 无缝热切账号与查询配额。
+
     *   **v4.9.5 (2026-10-05)**:
         -   **[更新分类] 核心更新标题 (PR #xxx)**:
             -   **功能详述**: 详细说明请在此处补充；涉及外部贡献者时以行内 `(Thanks to @username)` 标注。
