@@ -594,6 +594,7 @@ export default function AntigravityLabSettings({
 
     const [isSyncingCli, setIsSyncingCli] = useState(false);
     const [isLoadingCli, setIsLoadingCli] = useState(false);
+    const [isInstallingSkills, setIsInstallingSkills] = useState(false);
     const [autoSyncArgs, setAutoSyncArgs] = useState<boolean>(() => {
         const saved = localStorage.getItem('antigravity_lab_auto_sync_args');
         return saved !== 'false';
@@ -658,11 +659,29 @@ export default function AntigravityLabSettings({
         }
     };
 
+    const handleInstallSkills = async () => {
+        setIsInstallingSkills(true);
+        try {
+            const res = await request<string>('install_bundled_skills');
+            showToast(res || t('settings.lab.skills_install_success', { defaultValue: 'Successfully installed 6 bundled skills to ~/.gemini/config/skills/' }), 'success');
+        } catch (error) {
+            console.error('Failed to install bundled skills:', error);
+            showToast(`${t('settings.lab.skills_install_error', { defaultValue: 'Failed to install skills' })}: ${error}`, 'error');
+        } finally {
+            setIsInstallingSkills(false);
+        }
+    };
+
     const handleSyncCli = async () => {
         setIsSyncingCli(true);
         try {
             await request('sync_cli_experiments', { experiments: currentConfig });
-            showToast(t('settings.lab.sync_cli_success', { defaultValue: 'Successfully synced experimental features to CLI settings (~/.gemini/antigravity-cli/settings.json)' }), 'success');
+            try {
+                await request('install_bundled_skills');
+            } catch (skillErr) {
+                console.warn('Skills auto-install notice:', skillErr);
+            }
+            showToast(t('settings.lab.sync_cli_success', { defaultValue: 'Successfully synced experimental features & installed 6 bundled skills to Antigravity CLI!' }), 'success');
         } catch (error) {
             console.error('Failed to sync to CLI settings:', error);
             showToast(`${t('settings.lab.sync_cli_error', { defaultValue: 'Failed to sync to CLI settings' })}: ${error}`, 'error');
@@ -749,14 +768,26 @@ export default function AntigravityLabSettings({
 
             {/* Quick Slash Commands Cheatsheet */}
             <div className="bg-purple-100/40 dark:bg-purple-900/20 border border-purple-200/50 dark:border-purple-800/30 rounded-lg p-3 space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                     <span className="text-xs font-bold text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
                         <Terminal size={13} className="text-purple-600 dark:text-purple-400" />
                         {isZh ? '快捷斜杠指令 (CLI Slash Commands)' : 'CLI Slash Commands & Workflows'}
                     </span>
-                    <span className="text-[10px] text-purple-700 dark:text-purple-300 font-mono">
-                        ~/.gemini/config/skills/
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-purple-700 dark:text-purple-300 font-mono hidden sm:inline">
+                            ~/.gemini/config/skills/
+                        </span>
+                        <button
+                            type="button"
+                            onClick={handleInstallSkills}
+                            disabled={isInstallingSkills}
+                            className="btn btn-xs btn-primary rounded-none font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm"
+                            title="Install all 6 bundled skills into Antigravity (~/.gemini/config/skills)"
+                        >
+                            <Terminal size={11} className={isInstallingSkills ? 'animate-spin' : ''} />
+                            {isInstallingSkills ? 'Installing...' : '⚡ Install Skills (1-Click)'}
+                        </button>
+                    </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
                     <div className="p-2 rounded bg-base-100/60 dark:bg-base-200/60 border border-purple-100 dark:border-purple-900/30 space-y-0.5">

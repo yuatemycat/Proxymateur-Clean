@@ -763,6 +763,7 @@ pub fn run() {
             commands::get_antigravity_args,
             commands::get_cli_experiments,
             commands::sync_cli_experiments,
+            commands::install_bundled_skills,
             commands::check_for_updates,
             commands::check_native_update,
             commands::check_homebrew_installation,

@@ -1280,9 +1280,44 @@ pub async fn sync_cli_experiments(
     std::fs::write(&settings_path, formatted)
         .map_err(|e| format!("Failed to write CLI settings.json: {}", e))?;
 
+    // Also auto-install bundled skills when syncing to CLI
+    let _ = install_bundled_skills().await;
+
     Ok(format!(
         "Successfully synchronized {} experiment flags to CLI settings",
         count
+    ))
+}
+
+/// 安装内置的 6 个 Antigravity Slash Command 技能到 ~/.gemini/config/skills/
+#[tauri::command]
+pub async fn install_bundled_skills() -> Result<String, String> {
+    let home = dirs::home_dir().ok_or_else(|| "Failed to determine user home directory".to_string())?;
+    let skills_dir = home.join(".gemini").join("config").join("skills");
+
+    let bundled_skills: &[(&str, &str)] = &[
+        ("battle", include_str!("../../../skills/battle/SKILL.md")),
+        ("benchmark", include_str!("../../../skills/benchmark/SKILL.md")),
+        ("compact", include_str!("../../../skills/compact/SKILL.md")),
+        ("generative_ui", include_str!("../../../skills/generative_ui/SKILL.md")),
+        ("owl", include_str!("../../../skills/owl/SKILL.md")),
+        ("swarm", include_str!("../../../skills/swarm/SKILL.md")),
+    ];
+
+    let mut installed_count = 0;
+    for (name, content) in bundled_skills {
+        let skill_path = skills_dir.join(name);
+        std::fs::create_dir_all(&skill_path)
+            .map_err(|e| format!("Failed to create skill directory for {}: {}", name, e))?;
+        let skill_file = skill_path.join("SKILL.md");
+        std::fs::write(&skill_file, content)
+            .map_err(|e| format!("Failed to write SKILL.md for {}: {}", name, e))?;
+        installed_count += 1;
+    }
+
+    Ok(format!(
+        "Successfully installed {} bundled skills (/owl, /swarm, /battle, /compact, /benchmark, /generative_ui) to ~/.gemini/config/skills/",
+        installed_count
     ))
 }
 
