@@ -43,6 +43,30 @@ Unlike commercial relays or bloated proxies, **Proxymateur-Clean**:
 
 ---
 
+## 🔓 Unlocked Antigravity Capabilities & Reversed Internal Flags
+
+> *"I burned through a mountain of tokens reverse-engineering Antigravity's binaries (`language_server.exe` & `agy.exe`) so you don't have to. This clean release exposes the best hidden flags and advanced multi-agent workflows while remaining 100% sovereign, private, and TOS-safe."*
+
+### ⚡ Feature Matrix (Clean Release vs. Private Build)
+
+| Capability / Feature | Clean Release (This Repo) | Personal Private Build | Why It's a Game-Changer |
+|---|:---:|:---:|---|
+| **Account Switcher + Smart Warmup** | ✅ **Included** | ✅ | Automatically warms up idle accounts to refresh 5-hour rolling and 7-day weekly reset pools without waiting for usage drops. |
+| **Reversed Internal Flags (`--enable-...`)** | ✅ **Included** | ✅ | Unlocks hidden engine capabilities: `--enable-command-antivirus`, `--disable-teamwork-forced-flash-model`, `--enable-subagent-hub`, `--enable-persistent-terminals`, `--enable-browser-subagent-v2`. |
+| **`/swarm` (Next-Gen Multi-Agent Hub)** | ✅ **Included** | ✅ | Hands-free autonomous execution replacing `/teamwork-preview`. Never halts for trivial confirmations; mandates an internal **Tester / Verifier** self-healing loop; and keeps the parent context clean. |
+| **`/owl` (Challenger-Synthesizer Engine)** | ✅ **Included** | ✅ | Dual-agent pipeline (`DeepInvestigator` + `DeepCoder`). Doesn't just replace 'A' to fix problem 'B'—it adversarially attacks edge cases (*"what if X, Y, Z, or F happen?"*), validates invariants and compiler gates, then delivers surgical patches. |
+| **`/battle` (Colosseum Arena Duel)** | ✅ **Included** | ✅ | Pits 2 rival subagents against each other to build competing architectures, cross-critique flaws, and run empirical benchmarks to crown a victor. |
+| **`/benchmark` (Hardware Telemetry)** | ✅ **Included** | ✅ | Replaces guesswork with empirical hardware telemetry: dynamically synthesizes ad-hoc stress-test harnesses to measure p99 latency and ops/sec. |
+| **`/compaction` + Auto Token Governor** | ✅ **Included** | ✅ | Interactive slider (50k–500k tokens) and reactive history folding to eliminate latency spikes and prevent context exhaustion. |
+| **Real-Time Terminal Status Line** | ✅ **Included** | ✅ | Live terminal telemetry showing active model, context window usage (`ctx: 45.2k (4.4% of 1M)`), and rolling generation throughput (`88 tok/s`) using Hermes-style timestamp math. |
+| **Asynchronous Non-Blocking MCP** | ✅ **Included** | ✅ | `--enable-mcp-non-blocking-turn-load` loads MCP tool schemas asynchronously in the background so turns never freeze on slow servers. |
+| **Native Stdio MCP Server** | ✅ **Included** | ✅ | Built-in `proxymateur mcp` allows external AI agents (Claude Code, Cursor, OpenCode, Antigravity) to query quotas and hot-swap accounts mid-session. |
+| ~~**Auto JB / Persona Injection**~~ | ❌ *Excluded* | 🔒 *Private* | Strikethrough-ed to maintain complete compliance with upstream terms. |
+| ~~**Reverse Proxy Relay (Port 8045)**~~ | ❌ *Excluded* | 🔒 *Private* | Stripped out: no local relay port, no traffic interception, pure direct BYO OAuth. |
+| ~~**Virtual Custom Model Spoofing**~~ | ❌ *Excluded* | 🔒 *Private* | Native official Gemini models only. |
+
+---
+
 ## 💡 Key Features
 
 ### 1. 🎛️ Account Matrix & Health Dashboard
