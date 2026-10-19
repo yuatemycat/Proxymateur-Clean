@@ -1,5 +1,5 @@
 import { useState, useEffect, startTransition } from 'react';
-import { Save, Github, User, MessageCircle, ExternalLink, RefreshCw, Heart, Coffee, LayoutDashboard, Users, Settings as SettingsIcon, CheckCircle2, Send, Bot, BookOpen, Copy } from 'lucide-react';
+import { Save, Github, User, ExternalLink, RefreshCw, Heart, LayoutDashboard, Users, Settings as SettingsIcon, CheckCircle2, Bot, BookOpen, Copy } from 'lucide-react';
 import { request as invoke } from '../utils/request';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useConfigStore } from '../stores/useConfigStore';
@@ -108,7 +108,6 @@ function Settings() {
     });
 
     // Dialog state
-    const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
     const [dataDirPath, setDataDirPath] = useState<string>('~/.proxymateur/');
     const [pendingDataDir, setPendingDataDir] = useState<string>('');
     const [isMigrateDataDirOpen, setIsMigrateDataDirOpen] = useState(false);
@@ -1454,11 +1453,14 @@ function Settings() {
                                             <span className="text-gray-400 dark:text-gray-600">•</span>
                                             <span className="text-gray-500 dark:text-gray-400">{t('settings.branding.subtitle')}</span>
                                         </div>
+                                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                            Forked from <a href="https://github.com/lbjlaq/Antigravity-Manager" target="_blank" rel="noreferrer" className="underline hover:text-gray-600 dark:hover:text-gray-300">lbjlaq/Antigravity-Manager</a> (CC BY-NC-SA 4.0)
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Cards Grid - Now 5 columns */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full max-w-6xl px-4">
+                                {/* Cards Grid - 2 columns: Author & GitHub */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-xl px-4 mx-auto">
                                     {/* Author Card */}
                                     <div className="bg-white dark:bg-base-100 p-4 rounded-2xl border border-gray-100 dark:border-base-300 shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800 transition-all group flex flex-col items-center text-center gap-3">
                                         <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl group-hover:scale-110 transition-transform duration-300">
@@ -1466,40 +1468,13 @@ function Settings() {
                                         </div>
                                         <div>
                                             <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">{t('settings.about.author')}</div>
-                                            <div className="font-bold text-gray-900 dark:text-base-content">Ctrler</div>
+                                            <div className="font-bold text-gray-900 dark:text-base-content">Yuatemycat</div>
                                         </div>
                                     </div>
-
-                                    {/* WeChat Card */}
-                                    <div className="bg-white dark:bg-base-100 p-4 rounded-2xl border border-gray-100 dark:border-base-300 shadow-sm hover:shadow-md hover:border-green-200 dark:hover:border-green-800 transition-all group flex flex-col items-center text-center gap-3">
-                                        <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-xl group-hover:scale-110 transition-transform duration-300">
-                                            <MessageCircle className="w-6 h-6 text-green-500" />
-                                        </div>
-                                        <div>
-                                            <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">{t('settings.about.wechat')}</div>
-                                            <div className="font-bold text-gray-900 dark:text-base-content">Ctrler</div>
-                                        </div>
-                                    </div>
-
-                                    {/* Telegram Card */}
-                                    <a
-                                        href="https://t.me/AntigravityManager"
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="bg-white dark:bg-base-100 p-4 rounded-2xl border border-gray-100 dark:border-base-300 shadow-sm hover:shadow-md hover:border-sky-200 dark:hover:border-sky-800 transition-all group flex flex-col items-center text-center gap-3 cursor-pointer"
-                                    >
-                                        <div className="p-3 bg-sky-50 dark:bg-sky-900/20 rounded-xl group-hover:scale-110 transition-transform duration-300">
-                                            <Send className="w-6 h-6 text-sky-500" />
-                                        </div>
-                                        <div>
-                                            <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">{t('settings.about.telegram')}</div>
-                                            <div className="font-bold text-gray-900 dark:text-base-content whitespace-nowrap overflow-hidden text-ellipsis w-full">Channel</div>
-                                        </div>
-                                    </a>
 
                                     {/* GitHub Card */}
                                     <a
-                                        href="https://github.com/52191314/Antigravity-Manager"
+                                        href="https://github.com/yuatemycat/Proxymateur-Clean"
                                         target="_blank"
                                         rel="noreferrer"
                                         className="bg-white dark:bg-base-100 p-4 rounded-2xl border border-gray-100 dark:border-base-300 shadow-sm hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all group flex flex-col items-center text-center gap-3 cursor-pointer"
@@ -1510,25 +1485,11 @@ function Settings() {
                                         <div>
                                             <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">{t('settings.about.github')}</div>
                                             <div className="flex items-center gap-1 font-bold text-gray-900 dark:text-base-content">
-                                                <span>{t('settings.about.view_code')}</span>
-                                                <ExternalLink className="w-3 h-3 text-gray-400" />
+                                                 <span>{t('settings.about.view_code')}</span>
+                                                 <ExternalLink className="w-3 h-3 text-gray-400" />
                                             </div>
                                         </div>
                                     </a>
-
-                                    {/* Support Card */}
-                                    <div
-                                        onClick={() => setIsSupportModalOpen(true)}
-                                        className="bg-white dark:bg-base-100 p-4 rounded-2xl border border-gray-100 dark:border-base-300 shadow-sm hover:shadow-md hover:border-pink-200 dark:hover:border-pink-800 transition-all group flex flex-col items-center text-center gap-3 cursor-pointer"
-                                    >
-                                        <div className="p-3 bg-pink-50 dark:bg-pink-900/20 rounded-xl group-hover:scale-110 transition-transform duration-300">
-                                            <Heart className="w-6 h-6 text-pink-500 fill-pink-500" />
-                                        </div>
-                                        <div>
-                                            <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">{t('settings.about.support_title')}</div>
-                                            <div className="font-bold text-gray-900 dark:text-base-content">{t('settings.about.support_btn')}</div>
-                                        </div>
-                                    </div>
                                 </div>
 
                                 {/* Donation Banner */}
@@ -1883,82 +1844,8 @@ function Settings() {
                     </div>
                 </ModalDialog>
 
-                {/* Support Modal */}
-                <div className={`modal ${isSupportModalOpen ? 'modal-open' : ''} z-[100]`}>
-                    <div data-tauri-drag-region className="fixed top-0 left-0 right-0 h-8 z-[110]" />
-                    <div className="modal-box relative max-w-2xl bg-white dark:bg-base-100 shadow-2xl rounded-3xl p-0 overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-300">
-                        <div className="flex flex-col items-center p-8">
-                            <div className="w-16 h-16 bg-pink-50 dark:bg-pink-900/20 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
-                                <Coffee className="w-8 h-8 text-pink-500" />
-                            </div>
-
-                            <h3 className="text-2xl font-black text-gray-900 dark:text-base-content mb-3">{t('settings.about.support_title')}</h3>
-                            <p className="text-gray-500 dark:text-gray-400 text-sm text-center mb-8 max-w-md leading-relaxed">
-                                {t('settings.about.support_desc')}
-                            </p>
-
-                            {/* QR Codes Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mb-8">
-                                {/* Alipay */}
-                                <div className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-gray-50 dark:bg-base-200 border border-gray-100 dark:border-base-300">
-                                    <div className="w-full aspect-square relative bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
-                                        <img src="/images/donate/alipay.png" alt="Alipay" className="w-full h-full object-contain" />
-                                    </div>
-                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{t('settings.about.support_alipay')}</span>
-                                </div>
-
-                                {/* WeChat */}
-                                <div className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-gray-50 dark:bg-base-200 border border-gray-100 dark:border-base-300">
-                                    <div className="w-full aspect-square relative bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
-                                        <img src="/images/donate/wechat.png" alt="WeChat" className="w-full h-full object-contain" />
-                                    </div>
-                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{t('settings.about.support_wechat')}</span>
-                                </div>
-
-                                {/* Buy Me a Coffee */}
-                                <div className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-gray-50 dark:bg-base-200 border border-gray-100 dark:border-base-300">
-                                    <div className="w-full aspect-square relative bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
-                                        <img src="/images/donate/coffee.png" alt="Buy Me A Coffee" className="w-full h-full object-contain" />
-                                    </div>
-                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{t('settings.about.support_buymeacoffee')}</span>
-                                </div>
-                            </div>
-
-                            {/* USDT BEP20 Donation Address */}
-                            <div className="w-full p-4 mb-8 bg-gray-50 dark:bg-base-200 border border-gray-100 dark:border-base-300 rounded-2xl flex flex-col items-center gap-2 text-center">
-                                <span className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                                    USDT (BEP20)
-                                </span>
-                                <div className="flex items-center gap-2 max-w-full">
-                                    <code className="text-xs font-mono font-bold text-gray-800 dark:text-gray-200 bg-white dark:bg-base-100 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-base-300 select-all break-all">
-                                        0xd08d47bde441888166b801616754c667672cd502
-                                    </code>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            navigator.clipboard.writeText('0xd08d47bde441888166b801616754c667672cd502');
-                                            showToast(t('common.copied', 'Copied to clipboard!'), 'success');
-                                        }}
-                                        className="btn btn-xs btn-ghost text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                                        title="Copy"
-                                    >
-                                        <Copy className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={() => setIsSupportModalOpen(false)}
-                                className="w-full md:w-auto px-12 py-3 bg-gray-100 dark:bg-base-300 text-gray-700 dark:text-gray-200 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-base-200 transition-all"
-                            >
-                                {t('common.close') || 'Close'}
-                            </button>
-                        </div>
-                    </div>
-                    <div className="modal-backdrop bg-black/60 backdrop-blur-md fixed inset-0 z-[-1]" onClick={() => setIsSupportModalOpen(false)}></div>
-                </div>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }
 

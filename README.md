@@ -3,6 +3,8 @@
 > **Clean Account & Quota Studio for Antigravity (Non-Proxy, Community Edition)**
 >
 > An open-source, privacy-first desktop workspace designed for managing Google Antigravity accounts, monitoring real-time quotas, inspecting usage telemetry, and managing sessions — with zero 3rd-party proxy services, zero tracking, and pure client-side Bring-Your-Own (BYO) credentials.
+>
+> Forked from [lbjlaq/Antigravity-Manager](https://github.com/lbjlaq/Antigravity-Manager) (CC BY-NC-SA 4.0). Substantially modified, refactored, and maintained by [Yuatemycat](https://github.com/yuatemycat).
 
 <div align="center">
   <img src="public/icon.png" width="96" height="96" alt="Proxymateur-Clean Logo">
@@ -58,6 +60,24 @@ Unlike commercial relays or bloated proxies, **Proxymateur-Clean**:
 - Auto-detects local installations of Antigravity CLI (`agy`) and Antigravity IDE.
 - One-click import and synchronization of existing tokens and local session databases.
 - View and inspect historical conversation transcripts and telemetry without sending data over the network.
+
+### 4. ⚡ Bundled Antigravity Slash Commands & Skills
+Includes the 6 popular productivity and agent orchestration skills in the `skills/` directory:
+- `/owl`: Deep codebase investigation, iterative autonomous synthesis, and multi-agent architecture analysis.
+- `/swarm`: Autonomous multi-agent swarm pipeline to coordinate specialist subagents in parallel.
+- `/battle`: Colosseum Battle Mode pitting rival subagents against each other to debate trade-offs and benchmark solutions.
+- `/compact`: Prune and summarize conversation trajectories to save context tokens while preserving critical variables.
+- `/benchmark`: Programmatic tool synthesis and headless performance profiling.
+- `/generative_ui`: Dynamic rendering of rich interactive HTML widgets and data visualizations.
+
+**One-click installation**:
+```bash
+# Windows (PowerShell)
+.\skills\install_skills.ps1
+
+# macOS / Linux
+bash skills/install_skills.sh
+```
 
 ---
 
@@ -183,5 +203,10 @@ If this studio saves you time or empowers your workflow, your support is deeply 
 > 
 > "Google", "Antigravity", "Gemini", and "Google Cloud" are registered trademarks of Google LLC. All brand and product names are trademarks or registered trademarks of their respective holders.
 
-### License
-This project is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+### License & Attribution
+This project is licensed under [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+- **Original Work**: Forked from [lbjlaq/Antigravity-Manager](https://github.com/lbjlaq/Antigravity-Manager) © 2024–2026 lbjlaq.
+- **Modifications & Clean Edition**: Substantially modified, refactored, and maintained by [Yuatemycat](https://github.com/yuatemycat).
+- **Non-Commercial & ShareAlike**: You are free to share, study, and adapt this work for non-commercial purposes, provided appropriate credit is given and derivative works are distributed under the same license.
+
