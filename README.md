@@ -62,15 +62,19 @@ Unlike commercial relays or bloated proxies, **Proxymateur-Clean**:
 - View and inspect historical conversation transcripts and telemetry without sending data over the network.
 
 ### 4. ⚡ Bundled Antigravity Slash Commands & Skills
-Includes the 6 popular productivity and agent orchestration skills in the `skills/` directory:
+Includes the bundled productivity and agent orchestration skills in the `skills/` directory:
 - `/owl`: Deep codebase investigation, iterative autonomous synthesis, and multi-agent architecture analysis.
 - `/swarm`: Autonomous multi-agent swarm pipeline to coordinate specialist subagents in parallel.
 - `/battle`: Colosseum Battle Mode pitting rival subagents against each other to debate trade-offs and benchmark solutions.
-- `/compact`: Prune and summarize conversation trajectories to save context tokens while preserving critical variables.
+- `/compact` & `/compaction`: Prune and summarize conversation trajectories to save context tokens while preserving critical project state and variables.
 - `/benchmark`: Programmatic tool synthesis and headless performance profiling.
 - `/generative_ui`: Dynamic rendering of rich interactive HTML widgets and data visualizations.
 
-**One-click installation**:
+### 5. 🎚️ Auto Compaction Slider & Token Governor
+- **Interactive Threshold Slider**: Adjust the auto-compaction trigger limit from 50k to 500k tokens directly in **Settings → Antigravity Lab**.
+- **Self-Healing Trajectory**: Automatically writes `model_auto_compact_token_limit` to `~/.gemini/antigravity-cli/settings.json`, folding history when long turns or large command outputs push against the ceiling to eliminate latency spikes.
+- **1-Click GUI Installation**: Install all bundled skills and sync the token governor with a single click inside the app. Alternatively, run the scripts:
+
 ```bash
 # Windows (PowerShell)
 .\skills\install_skills.ps1

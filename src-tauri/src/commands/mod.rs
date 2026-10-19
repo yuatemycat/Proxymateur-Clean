@@ -1289,7 +1289,7 @@ pub async fn sync_cli_experiments(
     ))
 }
 
-/// 安装内置的 6 个 Antigravity Slash Command 技能到 ~/.gemini/config/skills/
+/// 安装内置的 Antigravity Slash Command 技能到 ~/.gemini/config/skills/
 #[tauri::command]
 pub async fn install_bundled_skills() -> Result<String, String> {
     let home = dirs::home_dir().ok_or_else(|| "Failed to determine user home directory".to_string())?;
@@ -1299,6 +1299,7 @@ pub async fn install_bundled_skills() -> Result<String, String> {
         ("battle", include_str!("../../../skills/battle/SKILL.md")),
         ("benchmark", include_str!("../../../skills/benchmark/SKILL.md")),
         ("compact", include_str!("../../../skills/compact/SKILL.md")),
+        ("compaction", include_str!("../../../skills/compaction/SKILL.md")),
         ("generative_ui", include_str!("../../../skills/generative_ui/SKILL.md")),
         ("owl", include_str!("../../../skills/owl/SKILL.md")),
         ("swarm", include_str!("../../../skills/swarm/SKILL.md")),
@@ -1316,9 +1317,73 @@ pub async fn install_bundled_skills() -> Result<String, String> {
     }
 
     Ok(format!(
-        "Successfully installed {} bundled skills (/owl, /swarm, /battle, /compact, /benchmark, /generative_ui) to ~/.gemini/config/skills/",
+        "Successfully installed {} bundled skills (/owl, /swarm, /battle, /compact, /compaction, /benchmark, /generative_ui) to ~/.gemini/config/skills/",
         installed_count
     ))
+}
+
+/// 设置 Antigravity CLI 自动响应式压缩上限 (model_auto_compact_token_limit)
+#[tauri::command]
+pub async fn set_cli_auto_compact(enabled: bool, threshold: u32) -> Result<String, String> {
+    let settings_path = get_cli_settings_path()
+        .ok_or_else(|| "Failed to determine user home directory".to_string())?;
+
+    if let Some(parent) = settings_path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+
+    let mut json_val: serde_json::Value = if settings_path.exists() {
+        let content = std::fs::read_to_string(&settings_path)
+            .map_err(|e| format!("Failed to read CLI settings.json: {}", e))?;
+        serde_json::from_str(&content).unwrap_or(serde_json::json!({}))
+    } else {
+        serde_json::json!({})
+    };
+
+    if !json_val.is_object() {
+        json_val = serde_json::json!({});
+    }
+
+    let map = json_val.as_object_mut().unwrap();
+    if enabled {
+        map.insert("model_auto_compact_token_limit".to_string(), serde_json::json!(threshold));
+    } else {
+        map.remove("model_auto_compact_token_limit");
+    }
+
+    let formatted = serde_json::to_string_pretty(&json_val)
+        .map_err(|e| format!("Failed to serialize CLI settings.json: {}", e))?;
+
+    std::fs::write(&settings_path, formatted)
+        .map_err(|e| format!("Failed to write CLI settings.json: {}", e))?;
+
+    Ok(format!(
+        "Auto-compaction token limit successfully set to {} in CLI settings",
+        if enabled { threshold } else { 0 }
+    ))
+}
+
+/// 读取 Antigravity CLI 自动响应式压缩上限 (model_auto_compact_token_limit)
+#[tauri::command]
+pub async fn get_cli_auto_compact() -> Result<Option<u32>, String> {
+    let settings_path = get_cli_settings_path()
+        .ok_or_else(|| "Failed to determine user home directory".to_string())?;
+
+    if !settings_path.exists() {
+        return Ok(None);
+    }
+
+    let content = std::fs::read_to_string(&settings_path)
+        .map_err(|e| format!("Failed to read CLI settings.json: {}", e))?;
+
+    let json_val: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse CLI settings.json: {}", e))?;
+
+    if let Some(limit) = json_val.get("model_auto_compact_token_limit").and_then(|v| v.as_u64()) {
+        Ok(Some(limit as u32))
+    } else {
+        Ok(None)
+    }
 }
 
 /// 检测更新响应结构

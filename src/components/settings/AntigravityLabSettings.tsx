@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     FlaskConical,
     Terminal,
+    Zap,
     Bot,
     Cpu,
     Layout,
@@ -600,6 +601,60 @@ export default function AntigravityLabSettings({
         return saved !== 'false';
     });
 
+    // Auto Compaction Token Governor state
+    const [enableAutoCompact, setEnableAutoCompact] = useState<boolean>(() => {
+        const saved = localStorage.getItem('antigravity_lab_enable_auto_compact');
+        return saved === 'true';
+    });
+    const [compactThreshold, setCompactThreshold] = useState<number>(() => {
+        const saved = localStorage.getItem('antigravity_lab_compact_threshold');
+        return saved ? parseInt(saved, 10) : 200000;
+    });
+    const [isSavingAutoCompact, setIsSavingAutoCompact] = useState(false);
+
+    useEffect(() => {
+        const fetchCliAutoCompact = async () => {
+            try {
+                const limit = await request<number | null>('get_cli_auto_compact');
+                if (limit && limit > 0) {
+                    setEnableAutoCompact(true);
+                    setCompactThreshold(limit);
+                    localStorage.setItem('antigravity_lab_enable_auto_compact', 'true');
+                    localStorage.setItem('antigravity_lab_compact_threshold', String(limit));
+                }
+            } catch (err) {
+                console.warn('Failed to get CLI auto compact limit:', err);
+            }
+        };
+        fetchCliAutoCompact();
+    }, []);
+
+    const handleToggleAutoCompact = (enabled: boolean) => {
+        setEnableAutoCompact(enabled);
+        localStorage.setItem('antigravity_lab_enable_auto_compact', String(enabled));
+    };
+
+    const handleThresholdChange = (threshold: number) => {
+        setCompactThreshold(threshold);
+        localStorage.setItem('antigravity_lab_compact_threshold', String(threshold));
+    };
+
+    const handleApplyAutoCompact = async () => {
+        setIsSavingAutoCompact(true);
+        try {
+            const res = await request<string>('set_cli_auto_compact', {
+                enabled: enableAutoCompact,
+                threshold: compactThreshold,
+            });
+            showToast(res || t('settings.lab.auto_compact_applied', { defaultValue: 'Auto-compaction token limit applied to CLI settings.' }), 'success');
+        } catch (error) {
+            console.error('Failed to apply auto-compaction limit:', error);
+            showToast(`${t('settings.lab.auto_compact_error', { defaultValue: 'Failed to apply auto-compaction limit' })}: ${error}`, 'error');
+        } finally {
+            setIsSavingAutoCompact(false);
+        }
+    };
+
     const activeCount = FEATURE_KEYS.filter(item => currentConfig[item.key]).length;
 
     const handleToggle = (key: keyof AntigravityLabConfig, enabled: boolean) => {
@@ -681,7 +736,15 @@ export default function AntigravityLabSettings({
             } catch (skillErr) {
                 console.warn('Skills auto-install notice:', skillErr);
             }
-            showToast(t('settings.lab.sync_cli_success', { defaultValue: 'Successfully synced experimental features & installed 6 bundled skills to Antigravity CLI!' }), 'success');
+            try {
+                await request('set_cli_auto_compact', {
+                    enabled: enableAutoCompact,
+                    threshold: compactThreshold,
+                });
+            } catch (compactErr) {
+                console.warn('Auto compact sync notice:', compactErr);
+            }
+            showToast(t('settings.lab.sync_cli_success', { defaultValue: 'Successfully synced experimental features, auto-compaction limit, & bundled skills to Antigravity CLI!' }), 'success');
         } catch (error) {
             console.error('Failed to sync to CLI settings:', error);
             showToast(`${t('settings.lab.sync_cli_error', { defaultValue: 'Failed to sync to CLI settings' })}: ${error}`, 'error');
@@ -811,8 +874,121 @@ export default function AntigravityLabSettings({
                         <div className="text-[11px] text-gray-500 dark:text-gray-400">{isZh ? '生成式交互 UI：在对话 Artifact 中嵌入可玩控件' : 'Interactive UI widgets rendered directly inside artifacts'}</div>
                     </div>
                     <div className="p-2 rounded bg-base-100/60 dark:bg-base-200/60 border border-purple-100 dark:border-purple-900/30 space-y-0.5">
-                        <div className="font-mono font-bold text-violet-600 dark:text-violet-400">/compact</div>
+                        <div className="font-mono font-bold text-violet-600 dark:text-violet-400">/compact | /compaction</div>
                         <div className="text-[11px] text-gray-500 dark:text-gray-400">{isZh ? '压缩修剪对话历史轨迹以释放上下文窗口' : 'Prune and compact trajectory context window cleanly'}</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Auto Compaction Slider & Context Token Governor */}
+            <div className="bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 rounded-lg p-3.5 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-emerald-200/40 dark:border-emerald-800/30">
+                    <div className="flex items-start gap-2.5">
+                        <div className="p-1.5 rounded-md bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">
+                            <Zap size={15} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                                    {isZh ? 'AGY CLI 自动响应式自愈压缩 (Auto Compaction)' : 'AGY CLI Auto Reactive Compaction & Token Governor'}
+                                </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800/40">
+                                    Token Governor
+                                </span>
+                            </div>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
+                                {isZh 
+                                    ? '监控活跃终端会话 Token 增长。当工具输出与长轮次使得上下文接近上限时，自动折叠历史记录生成摘要锚点，防止延迟剧增与上下文溢出。'
+                                    : 'Regulates session token growth in Antigravity CLI. Automatically triggers history compaction into a clean continuation summary when context nears the threshold, eliminating latency spikes.'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <label className="relative inline-flex items-center cursor-pointer select-none shrink-0 self-end sm:self-center">
+                        <input
+                            type="checkbox"
+                            checked={enableAutoCompact}
+                            onChange={(e) => handleToggleAutoCompact(e.target.checked)}
+                            className="sr-only peer"
+                        />
+                        <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:after:border-gray-600 peer-checked:bg-emerald-600"></div>
+                    </label>
+                </div>
+
+                {/* Slider Controls */}
+                <div className={`space-y-2.5 transition-all duration-200 ${enableAutoCompact ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            {isZh ? '自动压缩触发阈值 (Tokens)' : 'Compaction trigger threshold (Tokens)'}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="number"
+                                min={50000}
+                                max={500000}
+                                step={10000}
+                                value={compactThreshold}
+                                onChange={(e) => {
+                                    const val = parseInt(e.target.value, 10);
+                                    if (!isNaN(val)) {
+                                        handleThresholdChange(Math.max(50000, Math.min(500000, val)));
+                                    }
+                                }}
+                                className="w-28 px-2.5 py-1 text-xs text-right font-mono bg-white dark:bg-base-100 border border-emerald-300/60 dark:border-emerald-800/60 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            />
+                            <span className="text-xs font-mono text-gray-500 dark:text-gray-400">Tokens</span>
+                        </div>
+                    </div>
+
+                    {/* Range Slider */}
+                    <div className="flex items-center gap-3">
+                        <input
+                            type="range"
+                            min={50000}
+                            max={500000}
+                            step={10000}
+                            value={compactThreshold}
+                            onChange={(e) => handleThresholdChange(parseInt(e.target.value, 10))}
+                            className="range range-xs range-success flex-1"
+                        />
+                        <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 w-16 text-right">
+                            {(compactThreshold / 1000).toFixed(0)}k
+                        </span>
+                    </div>
+
+                    {/* Presets and Apply Button */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-[11px] text-gray-400 dark:text-gray-500 mr-1">Presets:</span>
+                            {[
+                                { label: "100k (Aggressive)", val: 100000 },
+                                { label: "150k (Balanced)", val: 150000 },
+                                { label: "200k (Recommended)", val: 200000 },
+                                { label: "300k (Extended)", val: 300000 },
+                            ].map((preset) => (
+                                <button
+                                    key={preset.val}
+                                    type="button"
+                                    onClick={() => handleThresholdChange(preset.val)}
+                                    className={`text-[10px] px-2.5 py-0.5 rounded font-mono font-medium transition-all ${
+                                        compactThreshold === preset.val
+                                            ? "bg-emerald-600 text-white shadow-xs"
+                                            : "bg-white dark:bg-base-100 text-gray-600 dark:text-gray-300 border border-emerald-200 dark:border-emerald-900/40 hover:border-emerald-400"
+                                    }`}
+                                >
+                                    {preset.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={handleApplyAutoCompact}
+                            disabled={isSavingAutoCompact}
+                            className="btn btn-xs btn-outline btn-success rounded-none text-[11px] font-bold uppercase tracking-wider flex items-center gap-1"
+                        >
+                            {isSavingAutoCompact ? 'Saving...' : 'Apply to CLI'}
+                        </button>
                     </div>
                 </div>
             </div>
