@@ -16,6 +16,7 @@ dist-ssr
 *.local
 .vite
 dist
+dist_release/
 
 # Editor directories and files
 .idea
