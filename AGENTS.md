@@ -33,6 +33,10 @@
     3. **Pre-flight before Tagging**: Run the Pre-flight Checks above on the exact commit to be tagged.
     4. **Commit, Tag & Push**: Push stable releases to `main` (`git tag vX.Y.Z && git push origin vX.Y.Z`), reserving `beta` exclusively for pre-releases (`git tag vX.Y.Z-beta.N && git push origin vX.Y.Z-beta.N`). The release gate strictly intercepts cross-branch misplacement. Tags must match `CHANGELOG.md` headings character-for-character (including `v` prefix and pre-release suffix).
   - *Full procedure*: See `docs/RELEASE_GUIDE.md` for bump options, changelog templates, and rollback steps.
+- **Strict English & Emoji Suppression Invariant**:
+  - **Zero Emojis Everywhere**: Future release titles, notes, git tags, commit messages, PR descriptions, changelog entries, and documentation MUST NOT contain any emojis.
+  - **Sole Exception**: The single allowed emoji is the heart strictly in the `💖 Support & Contributions` heading. All other headings, lists, badges, and tags must remain clean, professional, and strictly emoji-free.
+  - **English-Only Documentation**: All release communications and primary documentation must be authored in English.
 - **Thinking Cache Invalidation Control (发版清理建议)**:
   - File: `src/components/common/SuggestionDeleteThinkingModal.tsx`
   - Routine releases (no prompt): Keep `SUGGESTION_DELETE_THINKING_STORE = false`.
