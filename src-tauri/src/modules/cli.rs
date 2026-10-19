@@ -570,8 +570,8 @@ EXAMPLES:
     proxymateurswitch "my-label" --target ide
     proxymateurproxy status
     proxymateurproxy accounts
-    proxymateurproxy disable "xianspired@gmail.com"
-    proxymateurproxy enable "xianspired@gmail.com"
+    proxymateur proxy disable "user@example.com"
+    proxymateur proxy enable "user@example.com"
     proxymateurmcp
 "#,
         env!("CARGO_PKG_VERSION")

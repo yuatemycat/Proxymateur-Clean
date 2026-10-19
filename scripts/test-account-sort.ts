@@ -15,7 +15,7 @@ const toIso = (msFromNow) => new Date(now + msFromNow).toISOString();
 // Account 1: G3.8 Flash 100% (4h 51m), Claude 5.5 Weekly 0% (5d 21h)
 const acc1 = {
     id: 'acc1',
-    email: 'xia***ed@gmail.com',
+    email: 'user1@example.com',
     priority: 50,
     quota: {
         models: [

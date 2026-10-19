@@ -32,9 +32,9 @@ proxymateur accounts --json
 ```text
 ACT ACCOUNT ID                           EMAIL                          LABEL              GEMINI %   CLAUDE %   TIER        
 -----------------------------------------------------------------------------------------------------------------------------
- *  37999049-6c0b-42f1-96ba-1d2002242029 thunjaya@gmail.com             Thun               100%       100%       PRO
-    40d21f36-a111-4d39-ae0d-dc80476b3517 3sach.teukkork@gmail.com       Mengsean Cheang    100%       100%       PRO
-    54c3a09e-2dc8-4a8c-a432-f2f8064a1cdb jiangmengxianii@gmail.com      Xian Jian          100%       100%       PRO
+ *  37999049-6c0b-42f1-96ba-1d2002242029 dev1@example.com               Dev One            100%       100%       PRO
+    40d21f36-a111-4d39-ae0d-dc80476b3517 dev2@example.com               Dev Two            100%       100%       PRO
+    54c3a09e-2dc8-4a8c-a432-f2f8064a1cdb dev3@example.com               Dev Three          100%       100%       PRO
 ```
 
 ---
@@ -59,8 +59,8 @@ proxymateur quota --all --json
 
 **Output Example:**
 ```text
-Account: thunjaya@gmail.com (37999049-6c0b-42f1-96ba-1d2002242029)
-Label:   Thun
+Account: dev1@example.com (37999049-6c0b-42f1-96ba-1d2002242029)
+Label:   Dev One
 Tier:    PRO
 
 --- Quota Groups ---
@@ -140,7 +140,7 @@ proxymateur proxy enable "myemail@gmail.com"
 ##### 4. `proxymateur proxy disable <id|email|label> [reason]`
 Excludes an account from API proxy rotation (protecting its quotas for personal IDE use). Hot-reloads running proxy immediately.
 ```bash
-proxymateur proxy disable "xianspired@gmail.com" "Reserved for personal IDE usage"
+proxymateur proxy disable "developer@example.com" "Reserved for personal IDE usage"
 ```
 
 ---
