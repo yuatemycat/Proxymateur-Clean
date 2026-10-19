@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "code-review-graph": {
+      "command": "E:\\03_Devops\\Python\\Scripts\\code-review-graph.exe",
+      "args": [
+        "serve"
+      ],
+      "cwd": "E:\\02_Projects\\Antigravity-Manager",
+      "type": "stdio"
+    },
+    "agy-context-guard": {
+      "command": "E:\\03_Devops\\Python\\python.exe",
+      "args": [
+        "E:\\03_Devops\\AntigravityManager\\mcp\\agy_context_guard.py"
+      ],
+      "type": "stdio"
+    },
+    "memory": {
+      "command": "E:\\03_Devops\\NodeJS\\node.exe",
+      "args": [
+        "E:\\03_Devops\\NodeJS\\node_modules\\@modelcontextprotocol\\server-memory\\dist\\index.js"
+      ],
+      "env": {
+        "MEMORY_FILE_PATH": "C:\\Users\\X\\.gemini\\antigravity\\memory_graph.jsonl"
+      },
+      "type": "stdio"
+    }
+  }
+}

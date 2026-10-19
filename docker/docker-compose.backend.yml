@@ -1,0 +1,11 @@
+services:
+  proxymateur:
+    build:
+      dockerfile: docker/Dockerfile.backend
+      args:
+        FRONTEND_IMAGE: proxymateur:latest
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"

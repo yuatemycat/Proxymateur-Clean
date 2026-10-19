@@ -1,0 +1,1224 @@
+﻿
+
+import {
+  Calendar,
+  Clock,
+  Download,
+  Eye,
+  EyeOff,
+  LayoutGrid,
+  List,
+  RefreshCw,
+  Search,
+  Sparkles,
+  Trash2,
+  Upload,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import AccountDetailsDialog from "../components/accounts/AccountDetailsDialog";
+import AccountGrid from "../components/accounts/AccountGrid";
+import AccountTable from "../components/accounts/AccountTable";
+import AccountSortDropdown from "../components/accounts/AccountSortDropdown";
+import AccountQuotaSummaryBar from "../components/accounts/AccountQuotaSummaryBar";
+import AddAccountDialog from "../components/accounts/AddAccountDialog";
+import DeviceFingerprintDialog from "../components/accounts/DeviceFingerprintDialog";
+import ModalDialog from "../components/common/ModalDialog";
+import { Chip, PageHeader } from "../components/common/ledger";
+import Pagination from "../components/common/Pagination";
+import AccountErrorDialog from "../components/accounts/AccountErrorDialog";
+import { showToast } from "../components/common/ToastContainer";
+import { exportAccounts } from "../services/accountService";
+import { useAccountStore } from "../stores/useAccountStore";
+import { useConfigStore } from "../stores/useConfigStore";
+import { Account, getAccountTier } from "../types/account";
+import { AccountSortOption, sortAccounts } from "../utils/accountSort";
+import { cn } from "../utils/cn";
+import { isTauri } from "../utils/env";
+import { request as invoke } from "../utils/request";
+import { useTranslation } from "react-i18next";
+
+type FilterType = "all" | "pro" | "ultra" | "free";
+type ViewMode = "list" | "grid";
+export type QuotaWindow = "5h" | "weekly";
+
+
+function Accounts() {
+  const { t } = useTranslation();
+  const {
+    accounts,
+    currentAccount,
+    fetchAccounts,
+    addAccount,
+    deleteAccount,
+    deleteAccounts,
+    switchAccount,
+    loading,
+    refreshQuota,
+    toggleProxyStatus,
+    reorderAccounts,
+    warmUpAccounts,
+    warmUpAccount,
+    updateAccountLabel,
+    updateAccountPriority,
+  } = useAccountStore();
+  const { config, showAllQuotas, toggleShowAllQuotas } = useConfigStore();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filter, setFilter] = useState<FilterType>('all');
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem('accounts_view_mode');
+    return (saved === 'list' || saved === 'grid') ? saved : 'list';
+  });
+
+  const [quotaWindow, setQuotaWindow] = useState<QuotaWindow>(() => {
+    const saved = localStorage.getItem('accounts_quota_window');
+    return (saved === '5h' || saved === 'weekly') ? saved : '5h';
+  });
+
+  const [sortOption, setSortOption] = useState<AccountSortOption>(() => {
+    const saved = localStorage.getItem('accounts_sort_option');
+    return (saved as AccountSortOption) || 'default';
+  });
+
+  // Save view mode preference
+  useEffect(() => {
+    localStorage.setItem('accounts_view_mode', viewMode);
+  }, [viewMode]);
+
+  // Save quota window preference
+  useEffect(() => {
+    localStorage.setItem('accounts_quota_window', quotaWindow);
+  }, [quotaWindow]);
+
+  // Save sort option preference
+  useEffect(() => {
+    localStorage.setItem('accounts_sort_option', sortOption);
+  }, [sortOption]);
+
+  const [maskEmails, setMaskEmails] = useState<boolean>(() => {
+    return localStorage.getItem('antigravity_mask_emails') !== 'false';
+  });
+
+  const toggleMaskEmails = () => {
+    setMaskEmails((prev) => {
+      const next = !prev;
+      localStorage.setItem('antigravity_mask_emails', String(next));
+      return next;
+    });
+  };
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deviceAccount, setDeviceAccount] = useState<Account | null>(null);
+  const [detailsAccount, setDetailsAccount] = useState<Account | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isBatchDelete, setIsBatchDelete] = useState(false);
+  const [toggleProxyConfirm, setToggleProxyConfirm] = useState<{
+    accountId: string;
+    enable: boolean;
+  } | null>(null);
+  const [isWarmupConfirmOpen, setIsWarmupConfirmOpen] = useState(false);
+  const [isWarmuping, setIsWarmuping] = useState(false);
+  const [refreshingIds, setRefreshingIds] = useState<Set<string>>(new Set());
+  const [errorAccountId, setErrorAccountId] = useState<string | null>(null);
+
+  const handleWarmup = async (accountId: string) => {
+    setRefreshingIds((prev) => {
+      const next = new Set(prev);
+      next.add(accountId);
+      return next;
+    });
+    try {
+      const msg = await warmUpAccount(accountId);
+      showToast(msg, "success");
+    } catch (error) {
+      showToast(`${t("common.error")}: ${error}`, "error");
+    } finally {
+      setRefreshingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(accountId);
+        return next;
+      });
+    }
+  };
+
+  const handleUpdateLabel = async (accountId: string, label: string) => {
+    try {
+      await updateAccountLabel(accountId, label);
+      showToast(t('accounts.label_updated', 'Label updated'), 'success');
+    } catch (error) {
+      showToast(`${t('common.error')}: ${error}`, 'error');
+    }
+  };
+
+  const handleWarmupAll = async () => {
+    setIsWarmupConfirmOpen(false);
+    setIsWarmuping(true);
+    try {
+      const isBatch = selectedIds.size > 0;
+      if (isBatch) {
+        const ids = Array.from(selectedIds);
+        setRefreshingIds(new Set(ids));
+        const results = await Promise.allSettled(
+          ids.map((id) => warmUpAccount(id)),
+        );
+        let successCount = 0;
+        results.forEach((r) => {
+          if (r.status === "fulfilled") successCount++;
+        });
+        showToast(
+          t("accounts.warmup_batch_triggered", { count: successCount }),
+          "success",
+        );
+      } else {
+        const msg = await warmUpAccounts();
+        if (msg) {
+          showToast(msg, "success");
+        } else {
+          showToast(
+            t("accounts.warmup_all_triggered", "全量预热任务已触发"),
+            "success",
+          );
+        }
+      }
+    } catch (error) {
+      showToast(`${t("common.error")}: ${error}`, "error");
+    } finally {
+      setIsWarmuping(false);
+      setRefreshingIds(new Set());
+    }
+  };
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        setContainerSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
+    });
+    resizeObserver.observe(containerRef.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [localPageSize, setLocalPageSize] = useState<number | null>(() => {
+    const saved = localStorage.getItem("accounts_page_size");
+    return saved ? parseInt(saved) : null;
+  }); // 本地分页大小状态
+
+  // Save page size preference
+  useEffect(() => {
+    if (localPageSize !== null) {
+      localStorage.setItem("accounts_page_size", localPageSize.toString());
+    }
+  }, [localPageSize]);
+
+  // 动态计算分页条数
+  const ITEMS_PER_PAGE = useMemo(() => {
+    // 优先使用本地设置的分页大小
+    if (localPageSize && localPageSize > 0) {
+      return localPageSize;
+    }
+
+    // 其次使用用户配置的固定值
+    if (config?.accounts_page_size && config.accounts_page_size > 0) {
+      return config.accounts_page_size;
+    }
+
+    // 回退到原有的动态计算逻辑
+    if (!containerSize.height) return viewMode === "grid" ? 6 : 8;
+
+    if (viewMode === "list") {
+      const headerHeight = 36; // 缩深后的表头高度
+      const rowHeight = 72; // 包含多行模型信息后的实际行高
+      // 计算能容纳多少行, 默认最低 10 行
+      const autoFitCount = Math.floor(
+        (containerSize.height - headerHeight) / rowHeight,
+      );
+      return Math.max(10, autoFitCount);
+    } else {
+      const cardHeight = 180; // AccountCard 实际高度 (含间距)
+      const gap = 16; // gap-4
+
+      // 匹配 Tailwind 断点逻辑
+      let cols = 1;
+      if (containerSize.width >= 1200)
+        cols = 4; // xl (约为 1280 左右)
+      else if (containerSize.width >= 900)
+        cols = 3; // lg (约为 1024 左右)
+      else if (containerSize.width >= 600) cols = 2; // md (约为 768 左右)
+
+      const rows = Math.max(
+        1,
+        Math.floor((containerSize.height + gap) / (cardHeight + gap)),
+      );
+      return cols * rows;
+    }
+  }, [localPageSize, config?.accounts_page_size, containerSize, viewMode]);
+
+  useEffect(() => {
+    fetchAccounts();
+  }, []);
+
+  // Reset pagination when view mode changes to avoid empty pages or confusion
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [viewMode]);
+
+  // 搜索过滤逻辑
+  const searchedAccounts = useMemo(() => {
+    if (!searchQuery) return accounts;
+    const lowQuery = searchQuery.toLowerCase();
+    return accounts.filter((a) => a.email.toLowerCase().includes(lowQuery));
+  }, [accounts, searchQuery]);
+
+  // 计算各筛选状态下的数量 (基于搜索结果)
+  const filterCounts = useMemo(() => {
+    return {
+      all: searchedAccounts.length,
+      pro: searchedAccounts.filter((a) => getAccountTier(a) === "pro").length,
+      ultra: searchedAccounts.filter((a) => getAccountTier(a) === "ultra").length,
+      free: searchedAccounts.filter((a) => getAccountTier(a) === "free").length,
+    };
+  }, [searchedAccounts]);
+
+  // 过滤和搜索最终结果
+  const filteredAccounts = useMemo(() => {
+    if (filter === "all") return searchedAccounts;
+    return searchedAccounts.filter((a) => getAccountTier(a) === filter);
+  }, [searchedAccounts, filter]);
+
+  // 全局排序逻辑 (在分页前执行，保证跨所有页全局生效)
+  const sortedAccounts = useMemo(() => {
+    return sortAccounts(filteredAccounts, sortOption, quotaWindow);
+  }, [filteredAccounts, sortOption, quotaWindow]);
+
+  // Pagination Logic
+  const paginatedAccounts = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return sortedAccounts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [sortedAccounts, currentPage, ITEMS_PER_PAGE]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  // 清空选择当过滤改变 并重置分页
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setCurrentPage(1);
+  }, [filter, searchQuery, sortOption]);
+
+  const handleToggleSelect = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
+  const handleToggleAll = () => {
+    // 全选当前页的所有项
+    const currentIds = paginatedAccounts.map((a) => a.id);
+    const allSelected = currentIds.every((id) => selectedIds.has(id));
+
+    const newSet = new Set(selectedIds);
+    if (allSelected) {
+      currentIds.forEach((id) => newSet.delete(id));
+    } else {
+      currentIds.forEach((id) => newSet.add(id));
+    }
+    setSelectedIds(newSet);
+  };
+
+  const handleAddAccount = async (email: string, refreshToken: string) => {
+    await addAccount(email, refreshToken);
+  };
+
+  const [switchingAccountId, setSwitchingAccountId] = useState<string | null>(
+    null,
+  );
+
+  const handleSwitch = async (accountId: string, targetIde?: string) => {
+    if (loading || switchingAccountId) return;
+
+    setSwitchingAccountId(accountId);
+    console.log("[Accounts] handleSwitch called for:", accountId, "targetIde:", targetIde);
+    try {
+      await switchAccount(accountId, targetIde);
+      showToast(t("common.success"), "success");
+    } catch (error) {
+      console.error("[Accounts] Switch failed:", error);
+      showToast(`${t("common.error")}: ${error}`, "error");
+    } finally {
+      // Add a small delay for smoother UX
+      setTimeout(() => {
+        setSwitchingAccountId(null);
+      }, 500);
+    }
+  };
+
+  const handleRefresh = async (accountId: string) => {
+    setRefreshingIds((prev) => {
+      const next = new Set(prev);
+      next.add(accountId);
+      return next;
+    });
+    try {
+      await refreshQuota(accountId);
+      await refreshQuota(accountId);
+      await refreshQuota(accountId);
+      showToast(t("common.success"), "success");
+    } catch (error) {
+      showToast(`${t("common.error")}: ${error}`, "error");
+    } finally {
+      setRefreshingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(accountId);
+        return next;
+      });
+    }
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedIds.size === 0) return;
+    setIsBatchDelete(true);
+  };
+
+  const executeBatchDelete = async () => {
+    setIsBatchDelete(false);
+    try {
+      const ids = Array.from(selectedIds);
+      console.log("[Accounts] Batch deleting:", ids);
+      await deleteAccounts(ids);
+      setSelectedIds(new Set());
+      console.log("[Accounts] Batch delete success");
+      showToast(t("common.success"), "success");
+    } catch (error) {
+      console.error("[Accounts] Batch delete failed:", error);
+      showToast(`${t("common.error")}: ${error}`, "error");
+    }
+  };
+
+  const handleDelete = (accountId: string) => {
+    console.log("[Accounts] Request to delete:", accountId);
+    setDeleteConfirmId(accountId);
+  };
+
+  const executeDelete = async () => {
+    if (!deleteConfirmId) return;
+
+    try {
+      console.log("[Accounts] Executing delete for:", deleteConfirmId);
+      await deleteAccount(deleteConfirmId);
+      console.log("[Accounts] Delete success");
+      showToast(t("common.success"), "success");
+    } catch (error) {
+      console.error("[Accounts] Delete failed:", error);
+      showToast(`${t("common.error")}: ${error}`, "error");
+    } finally {
+      setDeleteConfirmId(null);
+    }
+  };
+
+  const handleToggleProxy = (accountId: string, currentlyDisabled: boolean) => {
+    setToggleProxyConfirm({ accountId, enable: currentlyDisabled });
+  };
+
+  const executeToggleProxy = async () => {
+    if (!toggleProxyConfirm) return;
+
+    try {
+      await toggleProxyStatus(
+        toggleProxyConfirm.accountId,
+        toggleProxyConfirm.enable,
+        toggleProxyConfirm.enable
+          ? undefined
+          : t("accounts.proxy_disabled_reason_manual"),
+      );
+      showToast(t("common.success"), "success");
+    } catch (error) {
+      console.error("[Accounts] Toggle proxy status failed:", error);
+      showToast(`${t("common.error")}: ${error}`, "error");
+    } finally {
+      setToggleProxyConfirm(null);
+    }
+  };
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshConfirmOpen, setIsRefreshConfirmOpen] = useState(false);
+
+  const handleRefreshClick = () => {
+    setIsRefreshConfirmOpen(true);
+  };
+
+  const executeRefresh = async () => {
+    setIsRefreshConfirmOpen(false);
+    setIsRefreshing(true);
+    try {
+      const isBatch = selectedIds.size > 0;
+      let successCount = 0;
+      let failedCount = 0;
+      const details: string[] = [];
+
+      if (isBatch) {
+        // 批量刷新选中
+        const ids = Array.from(selectedIds);
+        setRefreshingIds(new Set(ids));
+
+        const results = await Promise.allSettled(
+          ids.map((id) => refreshQuota(id)),
+        );
+
+        results.forEach((result, index) => {
+          const id = ids[index];
+          const email = accounts.find((a) => a.id === id)?.email || id;
+          if (result.status === "fulfilled") {
+            successCount++;
+          } else {
+            failedCount++;
+            details.push(`${email}: ${result.reason}`);
+          }
+        });
+      } else {
+        // 刷新所有
+        setRefreshingIds(new Set(accounts.map((a) => a.id)));
+        const stats = await useAccountStore.getState().refreshAllQuotas();
+        if (stats) {
+          successCount = stats.success;
+          failedCount = stats.failed;
+          details.push(...stats.details);
+        }
+      }
+
+      if (failedCount === 0) {
+        showToast(
+          t("accounts.refresh_selected", { count: successCount }),
+          "success",
+        );
+      } else {
+        showToast(
+          `${t("common.success")}: ${successCount}, ${t("common.error")}: ${failedCount}`,
+          "warning",
+        );
+        // You might want to show details in a different way, but for toast, keep it simple or use a "view details" action if supported.
+        // For now, simpler toast is better than a huge alert.
+        if (details.length > 0) {
+          console.warn("Refresh failures:", details);
+        }
+      }
+    } catch (error) {
+      showToast(`${t("common.error")}: ${error}`, "error");
+    } finally {
+      setIsRefreshing(false);
+      setRefreshingIds(new Set());
+    }
+  };
+
+  const exportAccountsToJson = async (accountsToExport: Account[]) => {
+    try {
+      if (accountsToExport.length === 0) {
+        showToast(t("dashboard.toast.export_no_accounts"), "warning");
+        return;
+      }
+
+      // 1. Get export data from API (contains refresh_token)
+      const accountIds = accountsToExport.map((acc) => acc.id);
+      const response = await exportAccounts(accountIds);
+
+      if (!response.accounts || response.accounts.length === 0) {
+        showToast(t("dashboard.toast.export_no_accounts"), "warning");
+        return;
+      }
+
+      const exportData = response.accounts;
+      const content = JSON.stringify(exportData, null, 2);
+      const fileName = `antigravity_accounts_${new Date().toISOString().split("T")[0]}.json`;
+
+      // 2. Determine Path & Export
+      if (isTauri()) {
+        let path: string | null = null;
+        const { join } = await import("@tauri-apps/api/path");
+
+        if (config?.default_export_path) {
+          // Use default path
+          path = await join(config.default_export_path, fileName);
+        } else {
+          // Use Native Dialog
+          const { save } = await import("@tauri-apps/plugin-dialog");
+          path = await save({
+            filters: [
+              {
+                name: "JSON",
+                extensions: ["json"],
+              },
+            ],
+            defaultPath: fileName,
+          });
+        }
+
+        if (!path) return; // Cancelled
+
+        // 3. Write File
+        await invoke("save_text_file", { path, content });
+        showToast(`${t("common.success")} ${path}`, "success");
+      } else {
+        // Web 模式：使用浏览器下载
+        const blob = new Blob([content], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast(
+          t("dashboard.toast.export_success", { path: fileName }),
+          "success",
+        );
+      }
+    } catch (error: any) {
+      console.error("Export failed:", error);
+      showToast(`${t("common.error")}: ${error}`, "error");
+    }
+  };
+
+  const handleExport = () => {
+    const idsToExport =
+      selectedIds.size > 0
+        ? Array.from(selectedIds)
+        : accounts.map((a) => a.id);
+
+    const accountsToExport = accounts.filter((a) => idsToExport.includes(a.id));
+    exportAccountsToJson(accountsToExport);
+  };
+
+  const handleExportOne = (accountId: string) => {
+    const account = accounts.find((a) => a.id === accountId);
+    if (account) {
+      exportAccountsToJson([account]);
+    }
+  };
+
+  const processImportData = async (content: string) => {
+    let importData: Array<{ email?: string; refresh_token?: string }>;
+    try {
+      importData = JSON.parse(content);
+    } catch {
+      showToast(t("accounts.import_invalid_format"), "error");
+      return;
+    }
+
+    if (!Array.isArray(importData) || importData.length === 0) {
+      showToast(t("accounts.import_invalid_format"), "error");
+      return;
+    }
+
+    const validEntries = importData.filter(
+      (item) =>
+        item.refresh_token &&
+        typeof item.refresh_token === "string" &&
+        item.refresh_token.startsWith("1//"),
+    );
+
+    if (validEntries.length === 0) {
+      showToast(t("accounts.import_invalid_format"), "error");
+      return;
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const entry of validEntries) {
+      try {
+        await addAccount(entry.email || "", entry.refresh_token!);
+        successCount++;
+      } catch (error) {
+        console.error("Import account failed:", error);
+        failCount++;
+      }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+
+    if (failCount === 0) {
+      showToast(
+        t("accounts.import_success", { count: successCount }),
+        "success",
+      );
+    } else if (successCount > 0) {
+      showToast(
+        t("accounts.import_partial", {
+          success: successCount,
+          fail: failCount,
+        }),
+        "warning",
+      );
+    } else {
+      showToast(
+        t("accounts.import_fail", { error: "All accounts failed to import" }),
+        "error",
+      );
+    }
+  };
+
+  const handleImportJson = async () => {
+    if (isTauri()) {
+      try {
+        const { open } = await import("@tauri-apps/plugin-dialog");
+        const selected = await open({
+          multiple: false,
+          filters: [
+            {
+              name: "JSON",
+              extensions: ["json"],
+            },
+          ],
+        });
+        if (!selected || typeof selected !== "string") return;
+
+        const content: string = await invoke("read_text_file", {
+          path: selected,
+        });
+        await processImportData(content);
+      } catch (error) {
+        console.error("Import failed:", error);
+        showToast(t("accounts.import_fail", { error: String(error) }), "error");
+      }
+    } else {
+      // Web 模式: 触发隐藏的 file input
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const content = await file.text();
+      await processImportData(content);
+    } catch (error) {
+      console.error("Import failed:", error);
+      showToast(t("accounts.import_fail", { error: String(error) }), "error");
+    } finally {
+      // 重置 input,允许重复选择同一文件
+      event.target.value = "";
+    }
+  };
+
+  const handleViewDetails = (accountId: string) => {
+    const account = accounts.find((a) => a.id === accountId);
+    if (account) {
+      setDetailsAccount(account);
+    }
+  };
+  const handleViewDevice = (accountId: string) => {
+    const account = accounts.find((a) => a.id === accountId);
+    if (account) {
+      setDeviceAccount(account);
+    }
+  };
+
+  const disabledCount = accounts.filter(
+    (a) => a.disabled || a.quota?.is_forbidden || a.validation_blocked,
+  ).length;
+  const activeCount = accounts.length - disabledCount;
+
+  const segWrap =
+    "inline-flex items-center gap-0.5 rounded-md bg-base-content/5 p-0.5 shrink-0";
+  const segBtn = (active: boolean) =>
+    cn(
+      "px-2.5 h-7 rounded text-xs font-medium flex items-center gap-1.5 whitespace-nowrap transition-colors",
+      active
+        ? "bg-base-content/10 text-base-content"
+        : "text-base-content/60 hover:text-base-content",
+    );
+  const searchInputClass =
+    "w-full h-8 pl-8 pr-3 bg-base-100 text-sm text-base-content border border-base-content/15 rounded-md focus:outline-none focus:border-base-content/40 placeholder:text-base-content/40";
+
+  const filterTabs: Array<{ id: FilterType; label: string }> = [
+    { id: "all", label: t("accounts.all") },
+    { id: "pro", label: t("accounts.pro") },
+    { id: "ultra", label: t("accounts.ultra") },
+    { id: "free", label: t("accounts.free") },
+  ];
+
+  return (
+    <div className="h-full flex flex-col p-5 gap-3 max-w-7xl mx-auto w-full">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        style={{ display: "none" }}
+        onChange={handleFileChange}
+      />
+
+      {/* 页头:Fleet 标题、状态芯片、主要操作 */}
+      <div className="flex-none">
+        <PageHeader
+          kicker={t("accounts.fleet_kicker", "Fleet")}
+          title={t("nav.accounts")}
+          status={
+            <>
+              <Chip tone="lime">
+                {accounts.length} {t("nav.accounts")}
+              </Chip>
+              <Chip tone="ink">
+                {activeCount} {t("accounts.summary.ready", "Ready")}
+              </Chip>
+              {disabledCount > 0 && (
+                <Chip tone="bad">
+                  {disabledCount} {t("accounts.disabled")}
+                </Chip>
+              )}
+              {selectedIds.size > 0 && (
+                <Chip tone="warn">
+                  {selectedIds.size} / {accounts.length}
+                </Chip>
+              )}
+            </>
+          }
+          actions={
+            <>
+              <AddAccountDialog onAdd={handleAddAccount} showText={true} />
+
+              <button
+                className="btn btn-ghost btn-sm gap-2 rounded-md whitespace-nowrap"
+                onClick={handleImportJson}
+                title={t("accounts.import_json")}
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline">
+                  {t("accounts.import_json")}
+                </span>
+              </button>
+
+              <button
+                className="btn btn-ghost btn-sm gap-2 rounded-md whitespace-nowrap"
+                onClick={handleExport}
+                title={
+                  selectedIds.size > 0
+                    ? t("accounts.export_selected", { count: selectedIds.size })
+                    : t("common.export")
+                }
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline">
+                  {selectedIds.size > 0
+                    ? t("accounts.export_selected", { count: selectedIds.size })
+                    : t("common.export")}
+                </span>
+              </button>
+
+              <button
+                className={cn(
+                  "btn btn-ghost btn-sm gap-2 rounded-md whitespace-nowrap",
+                  isRefreshing && "opacity-70 cursor-not-allowed",
+                )}
+                onClick={handleRefreshClick}
+                disabled={isRefreshing}
+                title={
+                  selectedIds.size > 0
+                    ? t("accounts.refresh_selected", { count: selectedIds.size })
+                    : t("accounts.refresh_all")
+                }
+              >
+                <RefreshCw
+                  className={cn("w-3.5 h-3.5", isRefreshing && "animate-spin")}
+                />
+                <span className="hidden lg:inline">
+                  {isRefreshing
+                    ? t("common.loading")
+                    : selectedIds.size > 0
+                      ? t("accounts.refresh_selected", { count: selectedIds.size })
+                      : t("accounts.refresh_all")}
+                </span>
+              </button>
+            </>
+          }
+        />
+      </div>
+
+      {/* 工具栏:搜索、过滤、排序、视图 */}
+      <div className="flex-none flex flex-wrap items-center gap-2">
+        {/* 搜索框 - 响应式:大屏显示输入框,小屏显示图标 */}
+        <div className="hidden lg:block flex-none w-44 relative transition-all focus-within:w-56">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/50" />
+          <input
+            type="text"
+            placeholder={t('accounts.search_placeholder')}
+            className={searchInputClass}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        {/* 搜索按钮 - 小屏显示 */}
+        <div className="lg:hidden relative">
+          {!isSearchExpanded ? (
+            <button
+              onClick={() => {
+                setIsSearchExpanded(true);
+                setTimeout(() => searchInputRef.current?.focus(), 100);
+              }}
+              className="btn btn-sm btn-square btn-ghost rounded-md"
+              title={t('accounts.search_placeholder')}
+            >
+              <Search className="w-4 h-4" />
+            </button>
+          ) : (
+            <div className="absolute left-0 top-0 z-10 w-64 flex items-center gap-1">
+              <div className="flex-1 relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/50" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder={t('accounts.search_placeholder')}
+                  className={searchInputClass}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onBlur={() => setIsSearchExpanded(false)}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 过滤标签 - 全部 / PRO / ULTRA / FREE */}
+        <div className={segWrap}>
+          {filterTabs.map(({ id, label }) => (
+            <button
+              key={id}
+              className={segBtn(filter === id)}
+              onClick={() => setFilter(id)}
+              title={`${label} (${filterCounts[id]})`}
+            >
+              <span className="hidden md:inline">{label}</span>
+              <span className="font-mono tabular-nums opacity-70">
+                {filterCounts[id]}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* 配额周期切换 (5H / 7天周配额) */}
+        <div className={segWrap}>
+          <button
+            className={segBtn(quotaWindow === "5h")}
+            onClick={() => setQuotaWindow("5h")}
+            title={t("accounts.quota_window_5h", "5小时滑动配额")}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <span>5H</span>
+          </button>
+          <button
+            className={segBtn(quotaWindow === "weekly")}
+            onClick={() => setQuotaWindow("weekly")}
+            title={t("accounts.quota_window_weekly", "7天周配额")}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>{t("accounts.quota_window_weekly_short", "周配额")}</span>
+          </button>
+        </div>
+
+        {/* 账号排序下拉菜单 */}
+        <AccountSortDropdown
+          sortOption={sortOption}
+          onSortChange={setSortOption}
+          quotaWindow={quotaWindow}
+        />
+
+        {/* 视图切换 + 邮箱隐私 */}
+        <div className={segWrap}>
+          <button
+            className={segBtn(viewMode === "list")}
+            onClick={() => setViewMode("list")}
+            title={t("accounts.views.list")}
+          >
+            <List className="w-4 h-4" />
+          </button>
+          <button
+            className={segBtn(viewMode === "grid")}
+            onClick={() => setViewMode("grid")}
+            title={t("accounts.views.grid")}
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </button>
+          <button
+            className={segBtn(maskEmails)}
+            onClick={toggleMaskEmails}
+            title={maskEmails ? t("accounts.privacy.show_email", "Show Full Email") : t("accounts.privacy.hide_email", "Hide Email (***)")}
+          >
+            {maskEmails ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+
+        {/* 批量操作 */}
+        <div className="flex flex-wrap items-center gap-2 ml-auto">
+          {selectedIds.size > 0 && (
+            <button
+              className="btn btn-sm btn-ghost gap-2 rounded-md whitespace-nowrap text-red-600 dark:text-red-400 hover:bg-red-500/10"
+              onClick={handleBatchDelete}
+              title={t("accounts.delete_selected", {
+                count: selectedIds.size,
+              })}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">
+                {t("accounts.delete_selected", { count: selectedIds.size })}
+              </span>
+            </button>
+          )}
+
+          <button
+            className={cn(
+              "btn btn-sm btn-ghost gap-2 rounded-md whitespace-nowrap",
+              isWarmuping && "opacity-70 cursor-not-allowed",
+            )}
+            onClick={() => setIsWarmupConfirmOpen(true)}
+            disabled={isWarmuping}
+            title={
+              selectedIds.size > 0
+                ? t("accounts.warmup_selected", { count: selectedIds.size })
+                : t("accounts.warmup_all", "一键预热所有账号")
+            }
+          >
+            <Sparkles
+              className={cn("w-3.5 h-3.5", isWarmuping && "animate-pulse")}
+            />
+            <span className="hidden md:inline">
+              {isWarmuping
+                ? t("common.loading")
+                : selectedIds.size > 0
+                  ? t("accounts.warmup_selected", { count: selectedIds.size })
+                  : t("accounts.warmup_all", "一键预热")}
+            </span>
+          </button>
+
+          <label className="flex items-center gap-2 cursor-pointer select-none px-2 h-8 rounded-md hover:bg-base-content/5 transition-colors whitespace-nowrap" title={t('accounts.show_all_quotas')}>
+            <span className="text-xs font-medium text-base-content/70 hidden md:inline">
+              {t('accounts.show_all_quotas')}
+            </span>
+            <input
+              type="checkbox"
+              className="toggle toggle-xs toggle-primary"
+              checked={showAllQuotas}
+              onChange={toggleShowAllQuotas}
+            />
+          </label>
+        </div>
+      </div>
+
+      {/* 账号配额总量摘要栏 */}
+      <AccountQuotaSummaryBar
+        accounts={filteredAccounts}
+        totalAccountsCount={accounts.length}
+        quotaWindow={quotaWindow}
+        onSelectWindow={setQuotaWindow}
+      />
+
+      {/* 账号列表内容区域 */}
+      <div className="flex-1 min-h-0 relative" ref={containerRef}>
+        {viewMode === "list" ? (
+          <div className="h-full bg-base-100 border-y border-base-content/10 flex flex-col">
+            <div className="flex-1 overflow-y-auto">
+              <AccountTable
+                accounts={paginatedAccounts}
+                selectedIds={selectedIds}
+                refreshingIds={refreshingIds}
+                onToggleSelect={handleToggleSelect}
+                onToggleAll={handleToggleAll}
+                currentAccountId={currentAccount?.id || null}
+                switchingAccountId={switchingAccountId}
+                onSwitch={handleSwitch}
+                onRefresh={handleRefresh}
+                onViewDevice={handleViewDevice}
+                onViewDetails={handleViewDetails}
+                onExport={handleExportOne}
+                onDelete={handleDelete}
+                onToggleProxy={(id) =>
+                  handleToggleProxy(
+                    id,
+                    !!accounts.find((a) => a.id === id)?.proxy_disabled,
+                  )
+                }
+                onReorder={reorderAccounts}
+                onWarmup={handleWarmup}
+                onUpdateLabel={handleUpdateLabel}
+                onViewError={(id: string) => setErrorAccountId(id)}
+                quotaWindow={quotaWindow}
+                maskEmails={maskEmails}
+                sortOption={sortOption}
+                onSortChange={setSortOption}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="h-full overflow-y-auto">
+            <AccountGrid
+              accounts={paginatedAccounts}
+              selectedIds={selectedIds}
+              refreshingIds={refreshingIds}
+              onToggleSelect={handleToggleSelect}
+              currentAccountId={currentAccount?.id || null}
+              switchingAccountId={switchingAccountId}
+              onSwitch={handleSwitch}
+              onRefresh={handleRefresh}
+              onViewDevice={handleViewDevice}
+              onViewDetails={handleViewDetails}
+              onExport={handleExportOne}
+              onDelete={handleDelete}
+              onToggleProxy={(id) =>
+                handleToggleProxy(
+                  id,
+                  !!accounts.find((a) => a.id === id)?.proxy_disabled,
+                )
+              }
+              onWarmup={handleWarmup}
+              onUpdateLabel={handleUpdateLabel}
+              onViewError={(id: string) => setErrorAccountId(id)}
+              quotaWindow={quotaWindow}
+              maskEmails={maskEmails}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* 分页 */}
+      {filteredAccounts.length > 0 && (
+        <div className="flex-none">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(filteredAccounts.length / ITEMS_PER_PAGE)}
+            onPageChange={handlePageChange}
+            totalItems={filteredAccounts.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageSizeChange={(newSize) => {
+              setLocalPageSize(newSize);
+              setCurrentPage(1); // 重置到第一页
+            }}
+            pageSizeOptions={[10, 20, 50, 100]}
+          />
+        </div>
+      )}
+
+      <AccountDetailsDialog
+        account={accounts.find(a => a.id === detailsAccount?.id) || null}
+        onClose={() => setDetailsAccount(null)}
+        onUpdatePriority={updateAccountPriority}
+      />
+      <DeviceFingerprintDialog
+        account={deviceAccount}
+        onClose={() => setDeviceAccount(null)}
+      />
+
+      <ModalDialog
+        isOpen={!!deleteConfirmId || isBatchDelete}
+        title={
+          isBatchDelete
+            ? t("accounts.dialog.batch_delete_title")
+            : t("accounts.dialog.delete_title")
+        }
+        message={
+          isBatchDelete
+            ? t("accounts.dialog.batch_delete_msg", { count: selectedIds.size })
+            : t("accounts.dialog.delete_msg")
+        }
+        type="confirm"
+        confirmText={t("common.delete")}
+        isDestructive={true}
+        onConfirm={isBatchDelete ? executeBatchDelete : executeDelete}
+        onCancel={() => {
+          setDeleteConfirmId(null);
+          setIsBatchDelete(false);
+        }}
+      />
+
+      <ModalDialog
+        isOpen={isRefreshConfirmOpen}
+        title={
+          selectedIds.size > 0
+            ? t("accounts.dialog.batch_refresh_title")
+            : t("accounts.dialog.refresh_title")
+        }
+        message={
+          selectedIds.size > 0
+            ? t("accounts.dialog.batch_refresh_msg", {
+              count: selectedIds.size,
+            })
+            : t("accounts.dialog.refresh_msg")
+        }
+        type="confirm"
+        confirmText={t("common.refresh")}
+        isDestructive={false}
+        onConfirm={executeRefresh}
+        onCancel={() => setIsRefreshConfirmOpen(false)}
+      />
+
+      {toggleProxyConfirm && (
+        <ModalDialog
+          isOpen={!!toggleProxyConfirm}
+          onCancel={() => setToggleProxyConfirm(null)}
+          onConfirm={executeToggleProxy}
+          title={
+            toggleProxyConfirm.enable
+              ? t("accounts.dialog.enable_proxy_title")
+              : t("accounts.dialog.disable_proxy_title")
+          }
+          message={
+            toggleProxyConfirm.enable
+              ? t("accounts.dialog.enable_proxy_msg")
+              : t("accounts.dialog.disable_proxy_msg")
+          }
+        />
+      )}
+
+      <ModalDialog
+        isOpen={isWarmupConfirmOpen}
+        title={
+          selectedIds.size > 0
+            ? t("accounts.dialog.batch_warmup_title", "批量手动预热")
+            : t("accounts.dialog.warmup_all_title", "全量手动预热")
+        }
+        message={
+          selectedIds.size > 0
+            ? t(
+              "accounts.dialog.batch_warmup_msg",
+              "确定要为选中的 {{count}} 个账号立即触发预热吗？",
+              { count: selectedIds.size },
+            )
+            : t(
+              "accounts.dialog.warmup_all_msg",
+              "确定要立即为所有符合条件的账号触发预热任务吗？这将向 Google 服务发送极小流量。",
+            )
+        }
+        type="confirm"
+        confirmText={t("accounts.warmup_now", "立即预热")}
+        isDestructive={false}
+        onConfirm={handleWarmupAll}
+        onCancel={() => setIsWarmupConfirmOpen(false)}
+      />
+
+      {/* 账号错误详情弹窗 */}
+      <AccountErrorDialog
+        account={accounts.find(a => a.id === errorAccountId) || null}
+        onClose={() => setErrorAccountId(null)}
+      />
+    </div>
+  );
+}
+
+export default Accounts;

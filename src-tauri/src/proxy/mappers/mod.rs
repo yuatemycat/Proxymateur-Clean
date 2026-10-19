@@ -1,0 +1,16 @@
+// Mappers 模块 - 协议转换器
+// 协议转换器模块
+
+pub mod caveman_cleaner;
+pub mod claude;
+pub mod common_utils;
+pub mod context_manager;
+pub mod demon;
+pub mod error_classifier;
+pub mod estimation_calibrator;
+pub mod gemini;
+pub mod model_limits;
+pub mod openai;
+pub mod prompt_sanitizer;
+pub mod rtk_cleaner;
+pub mod signature_store;

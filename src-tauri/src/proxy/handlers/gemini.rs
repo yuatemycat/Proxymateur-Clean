@@ -1,0 +1,1720 @@
+// Gemini Handler
+use axum::{
+    body::Body,
+    extract::State,
+    extract::{Json, Path},
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
+use serde_json::{json, Value};
+use tracing::{debug, error, info, warn};
+
+use crate::proxy::common::client_adapter::CLIENT_ADAPTERS;
+use crate::proxy::debug_logger;
+use crate::proxy::handlers::common::{
+    apply_retry_strategy, build_token_error_headers, next_rotation_attempt, should_rotate_account,
+    FailureStatusTracker, RequestRetryState, RetryStrategy,
+};
+use crate::proxy::mappers::gemini::{unwrap_response, wrap_request_v2};
+use crate::proxy::server::AppState;
+use crate::proxy::session_manager::SessionManager;
+use crate::proxy::upstream::client::mask_email;
+use axum::http::HeaderMap;
+
+const MAX_RETRY_ATTEMPTS: usize = 3;
+
+fn response_has_inline_image_data(value: &Value) -> bool {
+    let response = value.get("response").unwrap_or(value);
+    response
+        .get("candidates")
+        .and_then(Value::as_array)
+        .is_some_and(|candidates| {
+            candidates.iter().any(|candidate| {
+                candidate
+                    .get("content")
+                    .and_then(|content| content.get("parts"))
+                    .and_then(Value::as_array)
+                    .is_some_and(|parts| {
+                        parts.iter().any(|part| {
+                            part.get("inlineData")
+                                .or_else(|| part.get("inline_data"))
+                                .and_then(|image| image.get("data"))
+                                .and_then(Value::as_str)
+                                .is_some_and(|data| !data.is_empty())
+                        })
+                    })
+            })
+        })
+}
+
+#[cfg(test)]
+mod image_success_tests {
+    use super::response_has_inline_image_data;
+    use serde_json::json;
+
+    #[test]
+    fn task_gemini_image_success_requires_nonempty_payload() {
+        let empty = json!({
+            "response": {"candidates": [{"content": {"parts": [{"inlineData": {"data": ""}}]}}]}
+        });
+        let image = json!({
+            "response": {"candidates": [{"content": {"parts": [{"inlineData": {"data": "AQ=="}}]}}]}
+        });
+        assert!(!response_has_inline_image_data(&empty));
+        assert!(response_has_inline_image_data(&image));
+    }
+}
+
+/// 处理 generateContent 和 streamGenerateContent
+/// 路径参数: model_name, method (e.g. "gemini-pro", "generateContent")
+pub async fn handle_generate(
+    State(state): State<AppState>,
+    Path(model_action): Path<String>,
+    headers: HeaderMap, // [NEW] Extract headers for adapter detection
+    upstream_recorder: Option<
+        axum::extract::Extension<crate::proxy::monitor::UpstreamRequestBodyHolder>,
+    >,
+    user_identity: Option<
+        axum::extract::Extension<crate::proxy::middleware::auth::UserTokenIdentity>,
+    >,
+    Json(mut body): Json<Value>, // 改为 mut 以支持修复提示词注入
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let clean_start = std::time::Instant::now();
+
+    // 解析 model:method
+    let (model_name, method) = if let Some((m, action)) = model_action.rsplit_once(':') {
+        (m.to_string(), action.to_string())
+    } else {
+        (model_action, "generateContent".to_string())
+    };
+
+    crate::modules::logger::log_info(&format!(
+        "Received Gemini request: {}/{}",
+        model_name, method
+    ));
+    let trace_id = format!("req_{}", chrono::Utc::now().timestamp_subsec_millis());
+    let debug_cfg = state.debug_logging.read().await.clone();
+
+    // [NEW] Detect Client Adapter
+    let client_adapter = CLIENT_ADAPTERS
+        .iter()
+        .find(|a| a.matches(&headers))
+        .cloned();
+    if client_adapter.is_some() {
+        debug!("[{}] Client Adapter detected", trace_id);
+    }
+
+    // [DEFENSE] 净化 Gemini 原生请求体中的所有 inlineData (过滤或降级空数据/损坏图片)
+    crate::proxy::mappers::common_utils::sanitize_gemini_payload_inline_data(&mut body);
+
+    // [Stage Timing] 阶段耗时度量变量 (毫秒)
+    let clean_micros = clean_start.elapsed().as_micros() as u64;
+    let clean_ms: f64 = clean_micros as f64 / 1000.0;
+    let mut norm_ms: f64 = 0.0;
+    let mut think_fill_ms: f64 = 0.0;
+    let mut ttft_ms: f64 = 0.0;
+
+    // 1. 验证方法
+    // [NEW] :countTokens 冒号语法，直接代理到上游 v1internal:countTokens
+    if method == "countTokens" {
+        return Ok(execute_count_tokens(
+            state,
+            headers,
+            user_identity
+                .as_ref()
+                .map(|identity| identity.token_id.clone()),
+            model_name,
+            body,
+        )
+        .await);
+    }
+
+    if method != "generateContent" && method != "streamGenerateContent" {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            format!("Unsupported method: {}", method),
+        ));
+    }
+
+    // Vertex AI 直连：命中路由的模型可走用户自己的 GCP 项目。
+    // Vertex 优先时先在这里尝试，Vertex 侧不可用再落到下面的账号池；账号池优先时反过来。
+    let vertex_route =
+        crate::proxy::vertex::resolve_route(&crate::proxy::vertex::get_config(), &model_name);
+    if let Some(route) = vertex_route.as_ref().filter(|route| route.vertex_first) {
+        match crate::proxy::vertex::handle_generate(
+            &state.upstream,
+            route,
+            &method,
+            &body,
+            upstream_recorder.as_ref().map(|recorder| &recorder.0),
+        )
+        .await
+        {
+            Ok(response) => return Ok(response),
+            Err(failure) if !failure.can_fall_back || !route.allow_account_fallback => {
+                if !route.allow_account_fallback {
+                    warn!(
+                        "[Vertex] {} for {} — model is exclusive/not supported by accounts pool, rejecting fallback",
+                        failure.reason, model_name
+                    );
+                }
+                return Ok(failure.response);
+            }
+            Err(failure) => warn!(
+                "[Vertex] {} — falling back to the account pool for {}",
+                failure.reason, model_name
+            ),
+        }
+    }
+    // 账号池优先：账号池给不出可用账号时改走 Vertex
+    let accounts_first_vertex_route = vertex_route.filter(|route| !route.vertex_first);
+
+    if debug_logger::is_enabled(&debug_cfg) {
+        let original_payload = json!({
+            "kind": "original_request",
+            "protocol": "gemini",
+            "trace_id": trace_id,
+            "original_model": model_name,
+            "method": method,
+            "request": body.clone(),
+        });
+        debug_logger::write_debug_payload(
+            &debug_cfg,
+            Some(&trace_id),
+            "original_request",
+            &original_payload,
+        )
+        .await;
+    }
+    let client_wants_stream = method == "streamGenerateContent";
+    // [AUTO-CONVERSION] 强制内部流式化
+    let force_stream_internally = !client_wants_stream;
+    let is_stream = client_wants_stream || force_stream_internally;
+
+    if force_stream_internally {
+        // debug!("[AutoConverter] Converting non-stream request to stream");
+    }
+
+    // 2. 获取 UpstreamClient 和 TokenManager
+    let upstream = state.upstream.clone();
+    let image_scheduler = state.image_scheduler.clone();
+    let request_timeout = state.request_timeout;
+    let token_manager = state.token_manager;
+    let pool_size = token_manager.len();
+    // [FIX #3485] 自适应多账号池与单账号退避最大重试次数 (单账号3次，多账号整池两轮)
+    let max_attempts = crate::proxy::handlers::common::calculate_max_retry_attempts(pool_size);
+
+    let mut last_error = String::new();
+    let mut last_email: Option<String> = None;
+    let mut force_rotate = false;
+    let mut retry_state = RequestRetryState::default();
+    let mut retry_credentials: Option<(String, String, String, String, u64)> = None;
+    let mut image_permit = None;
+    let mut failure_statuses = FailureStatusTracker::default();
+    let mut used_attempts = 0;
+    let mut retried_without_thinking = false;
+
+    let client_effort = body
+        .get("request")
+        .unwrap_or(&body)
+        .get("generationConfig")
+        .and_then(|gc| gc.get("thinkingConfig"))
+        .and_then(|tc| tc.get("thinkingLevel").or_else(|| tc.get("effort")))
+        .and_then(|v| v.as_str());
+
+    let initial_mapped_model = crate::proxy::common::model_mapping::resolve_model_route_with_effort(
+        &model_name,
+        &*state.custom_mapping.read().await,
+        client_effort,
+    );
+
+    while let Some(attempt) = next_rotation_attempt(
+        &mut used_attempts,
+        max_attempts,
+        retry_credentials.is_some(),
+    ) {
+        // [Stage Timing] 中转归一计时起点
+        let norm_start = std::time::Instant::now();
+
+        // 3. 模型路由解析
+        let mut mapped_model = initial_mapped_model.clone();
+        // 提取 tools 列表以进行联网探测 (Gemini 风格可能是嵌套的，支持已带 request 包装的客户端)
+        let effective_req = body.get("request").unwrap_or(&body);
+        let tools_val: Option<Vec<Value>> = effective_req
+            .get("tools")
+            .and_then(|t| t.as_array())
+            .map(|arr| {
+                let mut flattened = Vec::new();
+                for tool_entry in arr {
+                    if let Some(decls) = tool_entry
+                        .get("functionDeclarations")
+                        .or_else(|| tool_entry.get("function_declarations"))
+                        .and_then(|v| v.as_array())
+                    {
+                        flattened.extend(decls.iter().cloned());
+                    } else {
+                        flattened.push(tool_entry.clone());
+                    }
+                }
+                flattened
+            });
+
+        let config = crate::proxy::mappers::common_utils::resolve_request_config(
+            &model_name,
+            &mapped_model,
+            &tools_val,
+            None,                // size (not applicable for Gemini native protocol)
+            None,                // quality
+            None,                // [NEW] image_size
+            Some(effective_req), // [NEW] Pass request body for imageConfig parsing
+        );
+
+        // 内容锚点只进思维库。账号粘性与上游 sessionId 用 affinity_key。
+        let anchor = SessionManager::gemini_content_anchor(&body);
+        let session_scope = crate::proxy::thinking_store::SessionScope::resolve(
+            &headers,
+            Some(&body),
+            None,
+            anchor,
+            user_identity
+                .as_ref()
+                .map(|identity| identity.token_id.as_str()),
+        );
+        let session_id = session_scope.store_key.clone();
+        let affinity_key = session_scope.affinity_key.clone();
+        let client_session_id = session_scope.client_id.clone();
+
+        // 关键：根据 force_rotate 标志决定是否轮换账号（支持 Grace Retry 原地重试）
+        let (access_token, project_id, email, account_id, _wait_ms) = if let Some(credentials) =
+            retry_credentials.take()
+        {
+            credentials
+        } else if config.request_type == "image_gen" {
+            drop(image_permit.take());
+            match token_manager
+                .get_image_token(
+                    force_rotate,
+                    Some(&affinity_key),
+                    &config.final_model,
+                    &image_scheduler,
+                    request_timeout,
+                )
+                .await
+            {
+                Ok((access_token, project_id, email, account_id, wait_ms, permit)) => {
+                    image_permit = Some(permit);
+                    (access_token, project_id, email, account_id, wait_ms)
+                }
+                Err((status, message)) => {
+                    failure_statuses.record(status);
+                    last_error = message;
+                    break;
+                }
+            }
+        } else {
+            match token_manager
+                .get_token_waiting_out_cooldown(
+                    &config.request_type,
+                    force_rotate,
+                    Some(&affinity_key),
+                    &config.final_model,
+                )
+                .await
+            {
+                Ok(t) => t,
+                Err(e) => {
+                    if let Some(route) = accounts_first_vertex_route.as_ref() {
+                        warn!(
+                            "[Vertex] Account pool unavailable ({}); using Vertex for {}",
+                            e, model_name
+                        );
+                        return Ok(
+                            match crate::proxy::vertex::handle_generate(
+                                &upstream,
+                                route,
+                                &method,
+                                &body,
+                                upstream_recorder.as_ref().map(|recorder| &recorder.0),
+                            )
+                            .await
+                            {
+                                Ok(response) => response,
+                                Err(failure) => failure.response,
+                            },
+                        );
+                    }
+
+                    // [AUTOMATIC MODEL FALLBACK]
+                    // If requested model is exhausted/limited across all accounts,
+                    // and it wasn't already gemini-3.8-flash:
+                    // Automatically fall back to gemini-3.8-flash (accounts pool or Vertex depending on existing setting)
+                    let fallback_model = crate::proxy::vertex::DEFAULT_MODEL; // "gemini-3.8-flash"
+                    if config.final_model != fallback_model {
+                        let vertex_cfg = crate::proxy::vertex::get_config();
+                        let fallback_vertex_route =
+                            crate::proxy::vertex::resolve_route(&vertex_cfg, fallback_model);
+
+                        // If Vertex is enabled and configured as VertexFirst, route to Vertex:
+                        if let Some(route) =
+                            fallback_vertex_route.as_ref().filter(|r| r.vertex_first)
+                        {
+                            warn!(
+                                    "[Model Fallback] Requested model '{}' exhausted ({}); falling back to Vertex AI ({}) for {}",
+                                    config.final_model, e, fallback_model, model_name
+                                );
+                            return Ok(
+                                match crate::proxy::vertex::handle_generate(
+                                    &upstream,
+                                    route,
+                                    &method,
+                                    &body,
+                                    upstream_recorder.as_ref().map(|recorder| &recorder.0),
+                                )
+                                .await
+                                {
+                                    Ok(response) => response,
+                                    Err(failure) => failure.response,
+                                },
+                            );
+                        }
+
+                        // Otherwise (accounts_first or Vertex disabled), try account pool with gemini-3.8-flash:
+                        match token_manager
+                            .get_token_waiting_out_cooldown(
+                                "gemini",
+                                false,
+                                Some(&affinity_key),
+                                fallback_model,
+                            )
+                            .await
+                        {
+                            Ok(fallback_token) => {
+                                warn!(
+                                        "[Model Fallback] Requested model '{}' exhausted ({}); falling back to account '{}' with {}",
+                                        config.final_model, e, fallback_token.2, fallback_model
+                                    );
+                                mapped_model = fallback_model.to_string();
+                                fallback_token
+                            }
+                            Err(fallback_err) => {
+                                // If account pool for gemini-3.8-flash is also unavailable, check if Vertex is available:
+                                if let Some(route) = fallback_vertex_route.as_ref() {
+                                    warn!(
+                                            "[Model Fallback] Accounts unavailable for both '{}' and '{}' ({}); falling back to Vertex AI for {}",
+                                            config.final_model, fallback_model, fallback_err, model_name
+                                        );
+                                    return Ok(
+                                        match crate::proxy::vertex::handle_generate(
+                                            &upstream,
+                                            route,
+                                            &method,
+                                            &body,
+                                            upstream_recorder.as_ref().map(|recorder| &recorder.0),
+                                        )
+                                        .await
+                                        {
+                                            Ok(response) => response,
+                                            Err(failure) => failure.response,
+                                        },
+                                    );
+                                }
+
+                                let headers = build_token_error_headers(
+                                    Some(mapped_model.as_str()),
+                                    last_email.as_deref(),
+                                    &e,
+                                );
+                                return Ok((
+                                    StatusCode::SERVICE_UNAVAILABLE,
+                                    headers,
+                                    format!("Token error: {}", e),
+                                )
+                                    .into_response());
+                            }
+                        }
+                    } else {
+                        let headers = build_token_error_headers(
+                            Some(mapped_model.as_str()),
+                            last_email.as_deref(),
+                            &e,
+                        );
+                        return Ok((
+                            StatusCode::SERVICE_UNAVAILABLE,
+                            headers,
+                            format!("Token error: {}", e),
+                        )
+                            .into_response());
+                    }
+                }
+            }
+        };
+
+        let mapped_model = token_manager
+            .resolve_dynamic_model_for_account(&account_id, &mapped_model)
+            .await;
+
+        last_email = Some(email.clone());
+        info!("✓ Using account: {} (type: {})", email, config.request_type);
+
+        // 5. 包装请求 (project injection)
+        // [FIX #765] Pass session_id to wrap_request for signature injection
+        // [NEW] 获取完整 Token 对象以注入动态规格 (dynamic > static default > 65535)
+        let token_obj = token_manager.get_token_by_id(&account_id);
+        let tf_start = std::time::Instant::now();
+        let mut wrapped_body = wrap_request_v2(
+            &body,
+            &project_id,
+            &mapped_model,
+            Some(account_id.as_str()),
+            Some(&session_id),
+            token_obj.as_ref(),
+            Some(&token_manager),
+            Some(&state.upstream),
+            Some(&affinity_key),
+        );
+        let tf_micros = tf_start.elapsed().as_micros() as u64;
+        let norm_total_micros = norm_start.elapsed().as_micros() as u64;
+        norm_ms = norm_total_micros.saturating_sub(tf_micros) as f64 / 1000.0;
+        think_fill_ms = tf_micros as f64 / 1000.0;
+
+        let _ =
+            crate::proxy::mappers::context_manager::ContextManager::apply_post_transit_context_mgmt(
+                &mut wrapped_body,
+                &mapped_model,
+            );
+        crate::proxy::mappers::prompt_sanitizer::PromptSanitizer::sanitize_gemini_payload(
+            &mut wrapped_body,
+        );
+        crate::proxy::mappers::common_utils::ensure_gemini_payload_ends_with_user(
+            &mut wrapped_body,
+        );
+
+        if let Some(ref recorder) = upstream_recorder {
+            recorder.set_value(&wrapped_body);
+        }
+
+        if debug_logger::is_enabled(&debug_cfg) {
+            let payload = json!({
+                "kind": "v1internal_request",
+                "protocol": "gemini",
+                "trace_id": trace_id,
+                "original_model": model_name,
+                "mapped_model": mapped_model,
+                "request_type": config.request_type,
+                "attempt": attempt,
+                "v1internal_request": wrapped_body.clone(),
+            });
+            debug_logger::write_debug_payload(
+                &debug_cfg,
+                Some(&trace_id),
+                "v1internal_request",
+                &payload,
+            )
+            .await;
+        }
+
+        // 5. 上游调用
+        let query_string = if is_stream { Some("alt=sse") } else { None };
+        let upstream_method = if is_stream {
+            "streamGenerateContent"
+        } else {
+            "generateContent"
+        };
+
+        // [FIX #1522] Inject Anthropic Beta Headers for Claude models
+        let mut extra_headers = std::collections::HashMap::new();
+        extra_headers.insert("x-session-id".to_string(), client_session_id.clone());
+        if mapped_model.to_lowercase().contains("claude") {
+            extra_headers.insert("anthropic-beta".to_string(), "claude-code-20250219,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14".to_string());
+            tracing::debug!(
+                "[Gemini] Injected Anthropic beta headers for Claude model: {}",
+                mapped_model
+            );
+        }
+
+        let preceding_turn_anchor = wrapped_body
+            .get("request")
+            .and_then(|r| r.get("contents"))
+            .or_else(|| wrapped_body.get("contents"))
+            .and_then(|c| c.as_array())
+            .and_then(|a| a.last())
+            .cloned();
+        let causal_anchor =
+            crate::proxy::thinking_store::compute_causal_anchor(preceding_turn_anchor.as_ref());
+
+        let upstream_req_start = std::time::Instant::now();
+        let call_result = match upstream
+            .call_v1_internal_with_headers(
+                upstream_method,
+                &access_token,
+                wrapped_body.clone(),
+                query_string,
+                extra_headers.clone(),
+                Some(account_id.as_str()),
+            )
+            .await
+        {
+            Ok(r) => r,
+            Err(e) => {
+                last_error = e.clone();
+                failure_statuses.record(StatusCode::BAD_GATEWAY);
+                drop(image_permit.take());
+                debug!(
+                    "Gemini Request failed on attempt {}/{}: {}",
+                    attempt + 1,
+                    max_attempts,
+                    e
+                );
+                continue;
+            }
+        };
+
+        // [NEW] 记录端点降级日志到 debug 文件
+        if !call_result.fallback_attempts.is_empty() && debug_logger::is_enabled(&debug_cfg) {
+            let fallback_entries: Vec<serde_json::Value> = call_result
+                .fallback_attempts
+                .iter()
+                .map(|a| {
+                    json!({
+                        "endpoint_url": a.endpoint_url,
+                        "status": a.status,
+                        "error": a.error,
+                    })
+                })
+                .collect();
+            let payload = json!({
+                "kind": "endpoint_fallback",
+                "protocol": "gemini",
+                "trace_id": trace_id,
+                "original_model": model_name,
+                "mapped_model": mapped_model,
+                "attempt": attempt,
+                "account": mask_email(&email),
+                "fallback_attempts": fallback_entries,
+            });
+            debug_logger::write_debug_payload(
+                &debug_cfg,
+                Some(&trace_id),
+                "endpoint_fallback",
+                &payload,
+            )
+            .await;
+        }
+
+        let response = call_result.response;
+        // [NEW] 提取实际请求的上游端点 URL，用于日志记录和排查
+        let upstream_url = response.url().to_string();
+        let status = response.status();
+
+        // [NEW] 提取官方 TraceID
+        let cloud_code_trace_id = response
+            .headers()
+            .get("x-cloudaicompanion-trace-id")
+            .and_then(|h| h.to_str().ok())
+            .map(|s| s.to_string());
+
+        if status.is_success() {
+            token_manager.commit_session(&affinity_key, &account_id);
+            // 6. 响应处理
+            if is_stream {
+                use axum::body::Body;
+                use axum::response::Response;
+                use bytes::{Bytes, BytesMut};
+                use futures::StreamExt;
+
+                let meta = json!({
+                    "protocol": "gemini",
+                    "trace_id": trace_id,
+                    "original_model": model_name,
+                    "mapped_model": mapped_model,
+                    "request_type": config.request_type,
+                    "attempt": attempt,
+                    "status": status.as_u16(),
+                    "upstream_url": upstream_url,
+                });
+                let response_stream = debug_logger::wrap_stream_with_debug(
+                    Box::pin(response.bytes_stream()),
+                    debug_cfg.clone(),
+                    trace_id.clone(),
+                    "upstream_response",
+                    meta,
+                );
+
+                // [Auto-Heal] 纯思考空回复流式自愈门禁 (Pipeline First)
+                let auto_heal_ctx = crate::proxy::pipeline::auto_heal::ThinkingAutoHealContext {
+                    upstream: upstream.clone(),
+                    method: upstream_method,
+                    access_token: access_token.clone(),
+                    original_body: wrapped_body.clone(),
+                    query_string,
+                    extra_headers: extra_headers.clone(),
+                    account_id: Some(account_id.clone()),
+                    trace_id: trace_id.clone(),
+                };
+                let mut response_stream =
+                    crate::proxy::pipeline::auto_heal::wrap_stream_with_empty_thinking_auto_heal(
+                        Box::pin(response_stream),
+                        auto_heal_ctx,
+                    );
+                let mut buffer = BytesMut::new();
+                let s_id = session_id.clone(); // Clone for stream closure
+
+                // [FIX #859 & CLI Header Timeout] Implement safe peek logic for Gemini stream.
+                // Downstream clients (such as `agy` Go HTTP client) enforce a 60s ResponseHeaderTimeout.
+                // We peek for up to 20s. If the first chunk takes longer than 20s (due to heavy context prefill),
+                // we release HTTP 200 headers with SSE keepalive rather than holding headers until downstream client timeout.
+                let mut first_chunk = None;
+                let mut retry_gemini = false;
+
+                match tokio::time::timeout(
+                    std::time::Duration::from_secs(20),
+                    response_stream.next(),
+                )
+                .await
+                {
+                    Ok(Some(Ok(bytes))) => {
+                        if bytes.is_empty() {
+                            tracing::warn!("[Gemini] Empty first chunk received, retrying...");
+                            retry_gemini = true;
+                        } else {
+                            ttft_ms = upstream_req_start.elapsed().as_micros() as f64 / 1000.0;
+                            first_chunk = Some(bytes);
+                        }
+                    }
+                    Ok(Some(Err(e))) => {
+                        tracing::warn!("[Gemini] Stream error during peek: {}, retrying...", e);
+                        last_error = format!("Stream error: {}", e);
+                        retry_gemini = true;
+                    }
+                    Ok(None) => {
+                        tracing::warn!("[Gemini] Stream ended immediately, retrying...");
+                        last_error = "Empty response".to_string();
+                        retry_gemini = true;
+                    }
+                    Err(_) => {
+                        tracing::warn!("[Gemini] First chunk peek window (20s) elapsed. Releasing HTTP 200 headers with SSE keepalive to prevent downstream client header timeout");
+                        // Don't retry: upstream is still actively calculating prefill/thinking, release headers to downstream client!
+                        first_chunk = None;
+                    }
+                }
+
+                if retry_gemini {
+                    failure_statuses.record(StatusCode::BAD_GATEWAY);
+                    continue;
+                }
+
+                // [NEW] 提取上游真实响应 modelVersion 及 Canary 标识
+                let mut upstream_model_version = mapped_model.clone();
+                let mut is_canary = false;
+                if let Some(ref b) = first_chunk {
+                    if let Ok(text) = std::str::from_utf8(b) {
+                        for line in text.lines() {
+                            if let Some(rest) = line.strip_prefix("data: ") {
+                                if let Ok(val) = serde_json::from_str::<Value>(rest.trim()) {
+                                    let mv = val
+                                        .get("response")
+                                        .and_then(|r| r.get("modelVersion"))
+                                        .or_else(|| val.get("modelVersion"))
+                                        .and_then(|v| v.as_str());
+                                    if let Some(m) = mv {
+                                        upstream_model_version = m.to_string();
+                                        is_canary = m.contains("-n")
+                                            || m.contains("-exp")
+                                            || m.contains("-canary");
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                tracing::info!(
+                    "[Gemini Upstream] Stamped modelVersion: {} (Canary: {})",
+                    upstream_model_version,
+                    is_canary
+                );
+
+                let s_id_for_stream = s_id.clone();
+                let model_name_for_stream = mapped_model.clone();
+                let client_display_model = model_name.clone();
+                let image_permit_for_stream = image_permit.take();
+                let track_image_success = config.request_type == "image_gen";
+                let image_success_manager = token_manager.clone();
+                let image_success_account = account_id.clone();
+                let image_success_model = mapped_model.clone();
+                let causal_anchor_clone = causal_anchor.clone();
+                let stream = async_stream::stream! {
+                    let _image_permit = image_permit_for_stream;
+                    let mut first_data = first_chunk;
+                    let mut meta_sent = false;
+                    let mut saw_image_data = false;
+                    let mut stream_failed = false;
+                    let mut thinking_acc =
+                        crate::proxy::thinking_store::TurnAccumulator::with_anchor(&causal_anchor_clone);
+
+                    loop {
+                        // [NEW] 阶段 6.2: 补全 __cloudCodeMeta 响应元数据透传
+                        // 官方 Worker 会将 TraceID 作为 SSE 流的第 0 个数据包下发
+                        if !meta_sent {
+                            if let Some(tid) = &cloud_code_trace_id {
+                                let meta_pkg = serde_json::json!({
+                                    "__cloudCodeMeta": {
+                                        "traceId": tid
+                                    }
+                                });
+                                yield Ok::<Bytes, String>(Bytes::from(format!("data: {}\n\n", serde_json::to_string(&meta_pkg).unwrap())));
+                            }
+                            if first_data.is_none() {
+                                yield Ok::<Bytes, String>(Bytes::from(": keepalive\n\n"));
+                            }
+                            meta_sent = true;
+                        }
+
+                        let item = if let Some(fd) = first_data.take() {
+                            Some(Ok(fd))
+                        } else {
+                            // [NEW] 第二阶段为 StreamIdleTimeout (300s / 5min)
+                            match tokio::time::timeout(std::time::Duration::from_secs(300), response_stream.next()).await {
+                                Ok(next_item) => next_item,
+                                Err(_) => {
+                                    let report = crate::proxy::mappers::error_classifier::report_stream_error(
+                                        "gemini",
+                                        "handle_generate",
+                                        &"stream idle timeout",
+                                        format!(
+                                            "model={} session={} buffer_bytes={} idle_secs=300",
+                                            model_name_for_stream,
+                                            s_id_for_stream,
+                                            buffer.len()
+                                        ),
+                                    );
+                                    stream_failed = true;
+                                    let error_json = serde_json::json!({
+                                        "error": {
+                                            "code": 504,
+                                            "message": report.client_message(),
+                                            "status": "DEADLINE_EXCEEDED",
+                                            "function": report.function,
+                                            "call_site": report.call_site(),
+                                            "params": report.params
+                                        }
+                                    });
+                                    // Gemini 原生协议没有 `[DONE]` 哨兵：原生客户端会把每个 data 帧按 JSON 解析，
+                                    // 追加 `[DONE]` 只会让真实错误被 "unexpected token [" 解析错误掩盖。
+                                    yield Ok::<Bytes, String>(Bytes::from(format!("data: {}\n\n", serde_json::to_string(&error_json).unwrap_or_default())));
+                                    None
+                                }
+                            }
+                        };
+
+                        let bytes = match item {
+                            Some(Ok(b)) => b,
+                            Some(Err(e)) => {
+                                let report = crate::proxy::mappers::error_classifier::report_stream_error(
+                                    "gemini",
+                                    "handle_generate",
+                                    &e,
+                                    format!(
+                                        "model={} session={} buffer_bytes={}",
+                                        model_name_for_stream,
+                                        s_id_for_stream,
+                                        buffer.len()
+                                    ),
+                                );
+                                stream_failed = true;
+                                let error_json = serde_json::json!({
+                                    "error": {
+                                        "code": 503,
+                                        "message": report.client_message(),
+                                        "status": "UNAVAILABLE",
+                                        "function": report.function,
+                                        "call_site": report.call_site(),
+                                        "params": report.params
+                                    }
+                                });
+                                yield Ok::<Bytes, String>(Bytes::from(format!("data: {}\n\n", serde_json::to_string(&error_json).unwrap_or_default())));
+                                break;
+                            }
+                            None => break,
+                        };
+
+                        debug!("[Gemini-SSE] Received chunk: {} bytes", bytes.len());
+                        buffer.extend_from_slice(&bytes);
+                        while let Some(pos) = buffer.iter().position(|&b| b == b'\n') {
+                            let line_raw = buffer.split_to(pos + 1);
+                            if let Ok(line_str) = std::str::from_utf8(&line_raw) {
+                                let line = line_str.trim();
+                                if line.is_empty() { continue; }
+
+                                if line.starts_with("data: ") {
+                                    let json_part = line.trim_start_matches("data: ").trim();
+                                    // Gemini 原生协议没有 `[DONE]` 哨兵：原生客户端（如 agy）会把每个 data 帧
+                                    // 按 protojson 解析，转发 `[DONE]` 会触发 "unexpected token [" 并中断会话。
+                                    if json_part == "[DONE]" {
+                                        continue;
+                                    }
+
+                                    match serde_json::from_str::<Value>(json_part) {
+                                        Ok(mut json) => {
+                                            if track_image_success && response_has_inline_image_data(&json) {
+                                                saw_image_data = true;
+                                            }
+                                            // [FIX #765] Extract thoughtSignature from stream
+                                            let inner_val = if json.get("response").is_some() {
+                                                json.get("response")
+                                            } else {
+                                                Some(&json)
+                                            };
+
+                                            if let Some(resp) = inner_val {
+                                                if let Some(candidates) = resp.get("candidates").and_then(|c| c.as_array()) {
+                                                    for cand in candidates {
+                                                        if let Some(parts) = cand.get("content").and_then(|c| c.get("parts")).and_then(|p| p.as_array()) {
+                                                            for part in parts {
+                                                                thinking_acc.ingest_part(part);
+                                                                if let Some(sig) = part.get("thoughtSignature").and_then(|s| s.as_str()) {
+                                                                    crate::proxy::SignatureCache::global()
+                                                                        .cache_session_signature(&s_id_for_stream, sig.to_string(), 1);
+                                                                    debug!("[Gemini-SSE] Cached session signature (len: {}) for session: {}", sig.len(), s_id_for_stream);
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            // [FIX #1522] Inject Tool ID into Stream Response
+                                            crate::proxy::mappers::gemini::wrapper::inject_ids_to_response(&mut json, &model_name_for_stream);
+
+                                            // [CAMOUFLAGE] 智能伪装: 若用户请求非 internal id (如 gemini-3.8-flash-high, gemini-3.8-flash-exp-a, argon, carbon 等),
+                                            // 将上游返回的 modelVersion 动态伪装为用户所请求的模型名称
+                                            if client_display_model != "gemini-3.8-flash-tiered" && client_display_model != "gemini-pro-agent" {
+                                                if let Some(mv) = json.get_mut("modelVersion") {
+                                                    *mv = serde_json::Value::String(client_display_model.clone());
+                                                }
+                                                if let Some(resp) = json.get_mut("response") {
+                                                    if let Some(mv) = resp.get_mut("modelVersion") {
+                                                        *mv = serde_json::Value::String(client_display_model.clone());
+                                                    }
+                                                }
+                                            }
+
+                                            // Unwrap v1internal response wrapper
+                                            if let Some(inner) = json.get_mut("response").map(|v| v.take()) {
+                                                let new_line = format!("data: {}\n\n", serde_json::to_string(&inner).unwrap_or_default());
+                                                yield Ok::<Bytes, String>(Bytes::from(new_line));
+                                            } else {
+                                                yield Ok::<Bytes, String>(Bytes::from(format!("data: {}\n\n", serde_json::to_string(&json).unwrap_or_default())));
+                                            }
+                                        }
+                                        Err(e) => {
+                                            let report = crate::proxy::mappers::error_classifier::report_stream_error(
+                                                "gemini",
+                                                "handle_generate",
+                                                &format!("json parse error: {e}"),
+                                                format!(
+                                                    "model={} session={} buffer_bytes={} line_bytes={} preview={}",
+                                                    model_name_for_stream,
+                                                    s_id_for_stream,
+                                                    buffer.len(),
+                                                    json_part.len(),
+                                                    crate::proxy::mappers::error_classifier::preview_payload(json_part)
+                                                ),
+                                            );
+                                            stream_failed = true;
+                                            let error_json = serde_json::json!({
+                                                "error": {
+                                                    "code": 502,
+                                                    "message": report.client_message(),
+                                                    "status": "INTERNAL",
+                                                    "function": report.function,
+                                                    "call_site": report.call_site(),
+                                                    "params": report.params
+                                                }
+                                            });
+                                            yield Ok::<Bytes, String>(Bytes::from(format!("data: {}\n\n", serde_json::to_string(&error_json).unwrap_or_default())));
+                                        }
+                                    }
+                                } else {
+                                    // Non-data lines (comments, etc.)
+                                    yield Ok::<Bytes, String>(Bytes::from(format!("{}\n\n", line)));
+                                }
+                            } else {
+                                // Non-UTF8 data? Just pass it through or skip
+                                debug!("[Gemini-SSE] Non-UTF8 line encountered");
+                                yield Ok::<Bytes, String>(line_raw.freeze());
+                            }
+                        }
+                    }
+
+                    // 仅在流式完整传输、没有发生网络中断或异常失败时，才原子提交思维链到持久化存储
+                    // 防止因 connection reset by peer / unexpected EOF 导致半截残废思维块污染历史记忆
+                    if !stream_failed {
+                        thinking_acc.commit(&s_id_for_stream);
+                    } else {
+                        warn!("[Gemini-SSE] Stream terminated prematurely or failed, discarding partial thinking block to prevent context poisoning: session={}", s_id_for_stream);
+                    }
+                    if track_image_success && saw_image_data && !stream_failed {
+                        image_success_manager.mark_account_success(&image_success_account);
+                        image_success_manager
+                            .clear_persisted_live_limit(
+                                &image_success_account,
+                                Some(&image_success_model),
+                            );
+                    }
+                };
+
+                let display_mapped_model = mapped_model.clone();
+                let display_upstream_mv = upstream_model_version.clone();
+
+                if client_wants_stream {
+                    let body = Body::from_stream(stream);
+                    return Ok(Response::builder()
+                        .header("Content-Type", "text/event-stream")
+                        .header("Cache-Control", "no-cache")
+                        .header("Connection", "keep-alive")
+                        .header("X-Accel-Buffering", "no")
+                        .header("X-Account-Email", &email)
+                        .header("X-Mapped-Model", &display_mapped_model)
+                        .header("X-Upstream-Model-Version", &display_upstream_mv)
+                        .header(
+                            "X-Upstream-Canary",
+                            if is_canary { "true" } else { "false" },
+                        )
+                        .header("X-Session-Id", &client_session_id)
+                        .header("X-Antigravity-Session-Id", &client_session_id)
+                        .header("X-Timing-Clean-Ms", format!("{:.3}", clean_ms))
+                        .header("X-Timing-Norm-Ms", format!("{:.3}", norm_ms))
+                        .header("X-Timing-Thinking-Ms", format!("{:.3}", think_fill_ms))
+                        .header("X-Timing-Ttft-Ms", format!("{:.3}", ttft_ms))
+                        .body(body)
+                        .unwrap()
+                        .into_response());
+                } else {
+                    // Collect to JSON
+                    use crate::proxy::mappers::gemini::collector::collect_stream_to_json_with_anchor;
+                    match collect_stream_to_json_with_anchor(
+                        Box::pin(stream),
+                        &s_id,
+                        Some(&causal_anchor),
+                    )
+                    .await
+                    {
+                        Ok(gemini_resp) => {
+                            info!(
+                                "[{}] ✓ Stream collected and converted to JSON (Gemini)",
+                                session_id
+                            );
+                            let mut unwrapped = unwrap_response(&gemini_resp);
+                            if !model_name.contains("tiered") {
+                                if let Some(mv) = unwrapped.get_mut("modelVersion") {
+                                    if mv.as_str().map_or(false, |s| s.contains("tiered")) {
+                                        *mv = serde_json::Value::String(model_name.clone());
+                                    }
+                                }
+                            }
+                            let final_mv = if !model_name.contains("tiered")
+                                && upstream_model_version.contains("tiered")
+                            {
+                                model_name.clone()
+                            } else {
+                                unwrapped
+                                    .get("modelVersion")
+                                    .or_else(|| {
+                                        gemini_resp
+                                            .get("response")
+                                            .and_then(|r| r.get("modelVersion"))
+                                    })
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or(&upstream_model_version)
+                                    .to_string()
+                            };
+                            let final_canary = final_mv.contains("-n")
+                                || final_mv.contains("-exp")
+                                || final_mv.contains("-canary");
+                            return Ok(Response::builder()
+                                .status(StatusCode::OK)
+                                .header("Content-Type", "application/json")
+                                .header("X-Account-Email", &email)
+                                .header("X-Mapped-Model", &display_mapped_model)
+                                .header("X-Upstream-Model-Version", final_mv)
+                                .header(
+                                    "X-Upstream-Canary",
+                                    if final_canary { "true" } else { "false" },
+                                )
+                                .header("X-Session-Id", &client_session_id)
+                                .header("X-Antigravity-Session-Id", &client_session_id)
+                                .header("X-Timing-Clean-Ms", format!("{:.3}", clean_ms))
+                                .header("X-Timing-Norm-Ms", format!("{:.3}", norm_ms))
+                                .header("X-Timing-Thinking-Ms", format!("{:.3}", think_fill_ms))
+                                .header("X-Timing-Ttft-Ms", format!("{:.3}", ttft_ms))
+                                .body(Body::from(serde_json::to_string(&unwrapped).unwrap()))
+                                .unwrap()
+                                .into_response());
+                        }
+                        Err(e) => {
+                            error!("Stream collection error: {}", e);
+                            return Ok((
+                                StatusCode::INTERNAL_SERVER_ERROR,
+                                format!("Stream collection error: {}", e),
+                            )
+                                .into_response());
+                        }
+                    }
+                }
+            }
+
+            ttft_ms = upstream_req_start.elapsed().as_micros() as f64 / 1000.0;
+            let mut gemini_resp: Value = response
+                .json()
+                .await
+                .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Parse error: {}", e)))?;
+
+            // [FIX #1522] Inject Tool ID into Non-streaming Response
+            crate::proxy::mappers::gemini::wrapper::inject_ids_to_response(
+                &mut gemini_resp,
+                &mapped_model,
+            );
+
+            // [FIX #765] Extract thoughtSignature from non-streaming response
+            let inner_val = if gemini_resp.get("response").is_some() {
+                gemini_resp.get("response")
+            } else {
+                Some(&gemini_resp)
+            };
+
+            if let Some(resp) = inner_val {
+                if let Some(candidates) = resp.get("candidates").and_then(|c| c.as_array()) {
+                    for cand in candidates {
+                        if let Some(parts) = cand
+                            .get("content")
+                            .and_then(|c| c.get("parts"))
+                            .and_then(|p| p.as_array())
+                        {
+                            for part in parts {
+                                if let Some(sig) =
+                                    part.get("thoughtSignature").and_then(|s| s.as_str())
+                                {
+                                    crate::proxy::SignatureCache::global().cache_session_signature(
+                                        &session_id,
+                                        sig.to_string(),
+                                        1,
+                                    );
+                                    debug!("[Gemini-Response] Cached session signature (len: {}) for session: {}", sig.len(), session_id);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            let preceding_turn = preceding_turn_anchor.as_ref();
+            crate::proxy::thinking_store::capture_gemini_response_with_preceding(
+                &session_id,
+                &gemini_resp,
+                preceding_turn,
+            );
+            let mut unwrapped = unwrap_response(&gemini_resp);
+            if model_name != "gemini-3.8-flash-tiered" && model_name != "gemini-pro-agent" {
+                if let Some(mv) = unwrapped.get_mut("modelVersion") {
+                    *mv = serde_json::Value::String(model_name.clone());
+                }
+            }
+            let final_mv = if model_name != "gemini-3.8-flash-tiered"
+                && model_name != "gemini-pro-agent"
+                && (mapped_model.contains("tiered") || mapped_model == "gemini-pro-agent")
+            {
+                model_name.clone()
+            } else {
+                unwrapped
+                    .get("modelVersion")
+                    .or_else(|| {
+                        gemini_resp
+                            .get("response")
+                            .and_then(|r| r.get("modelVersion"))
+                    })
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(&mapped_model)
+                    .to_string()
+            };
+            let final_canary = final_mv.contains("-n")
+                || final_mv.contains("-exp")
+                || final_mv.contains("-canary");
+            let display_mapped_model = mapped_model.clone();
+            return Ok(Response::builder()
+                .status(StatusCode::OK)
+                .header("Content-Type", "application/json")
+                .header("X-Account-Email", &email)
+                .header("X-Mapped-Model", &display_mapped_model)
+                .header("X-Upstream-Model-Version", final_mv)
+                .header(
+                    "X-Upstream-Canary",
+                    if final_canary { "true" } else { "false" },
+                )
+                .header("X-Session-Id", &client_session_id)
+                .header("X-Antigravity-Session-Id", &client_session_id)
+                .header("X-Timing-Clean-Ms", format!("{:.3}", clean_ms))
+                .header("X-Timing-Norm-Ms", format!("{:.3}", norm_ms))
+                .header("X-Timing-Thinking-Ms", format!("{:.3}", think_fill_ms))
+                .header("X-Timing-Ttft-Ms", format!("{:.3}", ttft_ms))
+                .body(Body::from(serde_json::to_string(&unwrapped).unwrap()))
+                .unwrap()
+                .into_response());
+        }
+
+        // 处理错误并重试
+        failure_statuses.record(status);
+        let status_code = status.as_u16();
+        let retry_after = response
+            .headers()
+            .get("Retry-After")
+            .and_then(|header| header.to_str().ok())
+            .map(str::to_string);
+        let error_text = response
+            .text()
+            .await
+            .unwrap_or_else(|_| format!("HTTP {}", status_code));
+        last_error = format!("HTTP {}: {}", status_code, error_text);
+        if debug_logger::is_enabled(&debug_cfg) {
+            let payload = json!({
+                "kind": "upstream_response_error",
+                "protocol": "gemini",
+                "trace_id": trace_id,
+                "original_model": model_name,
+                "mapped_model": mapped_model,
+                "request_type": config.request_type,
+                "attempt": attempt,
+                "status": status_code,
+                "upstream_url": upstream_url,
+                "account": mask_email(&email),
+                "error_text": error_text,
+            });
+            debug_logger::write_debug_payload(
+                &debug_cfg,
+                Some(&trace_id),
+                "upstream_response_error",
+                &payload,
+            )
+            .await;
+        }
+
+        // [FIX] 403 时优先检测 VALIDATION_REQUIRED 并设置 is_forbidden / validation_block 状态，确保及时提取 URL 与更新 UI
+        if status_code == 403 {
+            if let Some(acc_id) = token_manager.get_account_id_by_email(&email) {
+                if error_text.contains("VALIDATION_REQUIRED")
+                    || error_text.contains("verify your account")
+                    || error_text.contains("Verify your account")
+                    || error_text.contains("validation_url")
+                {
+                    tracing::warn!(
+                        "[Gemini] VALIDATION_REQUIRED detected on account {}, temporarily blocking",
+                        email
+                    );
+                    let block_minutes = 10i64;
+                    let block_until = chrono::Utc::now().timestamp() + (block_minutes * 60);
+
+                    if let Err(e) = token_manager
+                        .set_validation_block_public(&acc_id, block_until, &error_text)
+                        .await
+                    {
+                        tracing::error!("Failed to set validation block: {}", e);
+                    }
+                }
+
+                // 设置 is_forbidden 状态并持久化
+                if let Err(e) = token_manager.set_forbidden(&acc_id, &error_text).await {
+                    tracing::error!("Failed to set forbidden status: {}", e);
+                }
+            }
+        }
+
+        // [FIX session-1M] 上游按 sessionId 在服务端累计会话输入，长工具循环会把累计推过 1M，
+        // 之后该 sessionId 的所有请求都 400 "input token count exceeds ... 1048576"。
+        // 给 (账号, 对话) 的 sessionId 升代并立即重试:新 sessionId = 上游全新会话,对话无感恢复。
+        if status_code == 400 && error_text.contains("exceeds the maximum number of tokens") {
+            let generation = crate::proxy::common::session::bump_session(&account_id, &session_id);
+            tracing::warn!(
+                "[Gemini] Upstream session token accumulation exceeded 1M on account {}. sessionId bumped to generation {}, retrying with a fresh upstream session.",
+                email, generation
+            );
+            continue; // 重试:下一轮读取新代数,派生全新 sessionId
+        }
+
+        let scheduling_mode = token_manager.get_scheduling_mode().await;
+        let _allow_grace = match scheduling_mode {
+            crate::proxy::sticky_config::SchedulingMode::Balance => {
+                token_manager.tokens_count() <= 1
+            }
+            crate::proxy::sticky_config::SchedulingMode::CacheFirst => true,
+            crate::proxy::sticky_config::SchedulingMode::PerformanceFirst => false,
+        };
+
+        // 确定重试策略：传入当前 attempt 与 pool_size，执行智能自适应裁决
+        let strategy = retry_state.determine_strategy_adaptive(
+            &account_id,
+            status_code,
+            &error_text,
+            retry_after.as_deref(),
+            retried_without_thinking,
+            attempt,
+            pool_size,
+        );
+        // 统一流水线决策判定：协议无关的限流与错误判定
+        let classification = crate::proxy::pipeline::UpstreamClassification::classify(
+            status_code,
+            &error_text,
+            retry_after.as_deref(),
+        );
+        if classification.abandons_sticky_account() {
+            token_manager.abandon_session(&affinity_key, &account_id);
+            tracing::debug!(
+                "[Gemini] Unbound session {} from account {} due to status {}",
+                affinity_key,
+                email,
+                status_code
+            );
+        }
+
+        if classification.is_model_not_found() {
+            tracing::warn!(
+                "[Gemini] Target model [{}] not found on upstream (HTTP {}). Terminating retry loop without account lockout.",
+                mapped_model, status_code
+            );
+            let dual_err = crate::proxy::handlers::common::build_dual_track_error(
+                "gemini",
+                status_code,
+                &mapped_model,
+                &error_text,
+            );
+            return Ok((
+                StatusCode::from_u16(status_code).unwrap_or(StatusCode::NOT_FOUND),
+                [
+                    ("X-Account-Email", email.as_str()),
+                    ("X-Mapped-Model", mapped_model.as_str()),
+                ],
+                Json(dual_err),
+            )
+                .into_response());
+        }
+
+        if classification.is_thought_signature_error() {
+            if !retried_without_thinking {
+                retried_without_thinking = true;
+                tracing::warn!(
+                    "[Gemini] Pipeline: Thinking signature error detected on upstream (HTTP {}). Surgically purging corrupted signatures and retrying on same account.",
+                    status_code
+                );
+                // 1. 精准定向净化 ThinkingStore 中的异构污染签名
+                session_scope.purge_signatures(&mapped_model);
+                // 3. 保持同一账号原地重试
+                force_rotate = false;
+                continue;
+            } else {
+                tracing::warn!(
+                    "[Gemini] Pipeline: Thinking signature error persisted after retry without thinking. Terminating retry loop."
+                );
+            }
+        }
+
+        let should_mark_limited = classification.should_lock_account();
+        let needs_quota_refresh = if should_mark_limited {
+            token_manager
+                .mark_rate_limited_fast(
+                    &email,
+                    status_code,
+                    retry_after.as_deref(),
+                    &error_text,
+                    Some(&mapped_model),
+                )
+                .await
+        } else {
+            false
+        };
+        if !matches!(&strategy, RetryStrategy::GraceRetry(_)) {
+            drop(image_permit.take());
+        }
+        if needs_quota_refresh {
+            token_manager
+                .refresh_quota_lock_after_fast_mark(&email, Some(&mapped_model))
+                .await;
+        }
+        let trace_id = format!("gemini_{}", session_id);
+
+        // 执行退避
+        if apply_retry_strategy(
+            strategy.clone(),
+            attempt,
+            max_attempts,
+            status_code,
+            &trace_id,
+        )
+        .await
+        {
+            if matches!(strategy, RetryStrategy::GraceRetry(_)) {
+                retry_credentials = Some((
+                    access_token.clone(),
+                    project_id.clone(),
+                    email.clone(),
+                    account_id.clone(),
+                    0,
+                ));
+            }
+            // [NEW] Apply Client Adapter "let_it_crash" strategy
+            if let Some(adapter) = &client_adapter {
+                if adapter.let_it_crash() && attempt > 0 {
+                    tracing::warn!(
+                        "[Gemini] let_it_crash active: Aborting retries after attempt {}",
+                        attempt
+                    );
+                    break;
+                }
+            }
+
+            // 判断是否需要轮换账号
+            if !should_rotate_account(status_code, Some(&strategy)) {
+                debug!(
+                "[{}] Keeping same account for status {} (Gemini server-side issue or Grace Retry)",
+                trace_id, status_code
+            );
+                force_rotate = false;
+            } else {
+                force_rotate = true;
+            }
+
+            continue;
+        }
+
+        // 404 等由于模型配置或路径错误的 HTTP 异常，直接报错，不进行无效轮换
+        error!(
+            "Gemini Upstream non-retryable error {}: {}",
+            status_code, error_text
+        );
+        let dual_err = crate::proxy::handlers::common::build_dual_track_error(
+            "gemini",
+            status_code,
+            &mapped_model,
+            &error_text,
+        );
+        return Ok((
+            status,
+            [
+                ("X-Account-Email", email.as_str()),
+                ("X-Mapped-Model", mapped_model.as_str()),
+            ],
+            Json(dual_err),
+        )
+            .into_response());
+    }
+
+    // 账号池优先且整池尝试均失败：最后改走 Vertex
+    if let Some(route) = accounts_first_vertex_route.as_ref() {
+        warn!(
+            "[Vertex] Account pool attempts exhausted ({}); using Vertex for {}",
+            last_error, model_name
+        );
+        if let Ok(response) = crate::proxy::vertex::handle_generate(
+            &upstream,
+            route,
+            &method,
+            &body,
+            upstream_recorder.as_ref().map(|recorder| &recorder.0),
+        )
+        .await
+        {
+            return Ok(response);
+        }
+    }
+
+    // 所有尝试均失败：仅当全部结构化失败状态均为 429 时返回 429
+    let final_status = failure_statuses.final_status();
+    let headers = build_token_error_headers(
+        Some(initial_mapped_model.as_str()),
+        last_email.as_deref(),
+        &last_error,
+    );
+
+    let dual_err = crate::proxy::handlers::common::build_dual_track_error(
+        "gemini",
+        final_status.as_u16(),
+        initial_mapped_model.as_str(),
+        &last_error,
+    );
+
+    Ok((final_status, headers, Json(dual_err)).into_response())
+}
+
+pub async fn handle_list_models(
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    use crate::proxy::common::model_mapping::get_all_dynamic_models;
+
+    // 获取所有动态模型列表（与 /v1/models 一致）
+    let only_raw = *state.only_raw_quota_models.read().await;
+    let model_ids =
+        get_all_dynamic_models(&state.custom_mapping, Some(&state.token_manager), only_raw).await;
+
+    // 转换为 Gemini API 格式
+    let models: Vec<_> = model_ids
+        .into_iter()
+        .map(|id| {
+            json!({
+                "name": format!("models/{}", id),
+                "version": "001",
+                "displayName": id.clone(),
+                "description": "",
+                "inputTokenLimit": 128000,
+                "outputTokenLimit": 8192,
+                "supportedGenerationMethods": ["generateContent", "countTokens"],
+                "temperature": 1.0,
+                "topP": 0.95,
+                "topK": 64
+            })
+        })
+        .collect();
+
+    Ok(Json(json!({ "models": models })))
+}
+
+pub async fn handle_get_model(
+    State(state): State<AppState>,
+    Path(model_name): Path<String>,
+) -> impl IntoResponse {
+    use crate::proxy::common::model_mapping::find_dynamic_model;
+
+    let only_raw = *state.only_raw_quota_models.read().await;
+    if let Some(matched_id) = find_dynamic_model(
+        &state.custom_mapping,
+        Some(&state.token_manager),
+        only_raw,
+        &model_name,
+    )
+    .await
+    {
+        (
+            StatusCode::OK,
+            Json(json!({
+                "name": format!("models/{}", matched_id),
+                "version": "001",
+                "displayName": matched_id,
+                "description": "",
+                "inputTokenLimit": 128000,
+                "outputTokenLimit": 8192,
+                "supportedGenerationMethods": ["generateContent", "countTokens"],
+                "temperature": 1.0,
+                "topP": 0.95,
+                "topK": 64
+            })),
+        )
+            .into_response()
+    } else {
+        let clean_name = model_name.strip_prefix("models/").unwrap_or(&model_name);
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "error": {
+                    "code": 404,
+                    "message": format!(
+                        "models/{} is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+                        clean_name
+                    ),
+                    "status": "NOT_FOUND"
+                }
+            })),
+        )
+            .into_response()
+    }
+}
+
+pub async fn handle_count_tokens(
+    State(state): State<AppState>,
+    Path(model_name): Path<String>,
+    headers: HeaderMap,
+    user_identity: Option<
+        axum::extract::Extension<crate::proxy::middleware::auth::UserTokenIdentity>,
+    >,
+    Json(body): Json<Value>,
+) -> Response {
+    execute_count_tokens(
+        state,
+        headers,
+        user_identity.map(|identity| identity.token_id.clone()),
+        model_name,
+        body,
+    )
+    .await
+}
+
+/// 核心 countTokens 实现：透明代理到上游 v1internal:countTokens
+///
+/// 获取有效 OAuth Token，将标准 Gemini 请求体包装为 v1internal 格式后转发，
+/// 返回真实的 token 计数，而不是硬编码的 0
+pub async fn execute_count_tokens(
+    state: AppState,
+    headers: HeaderMap,
+    tenant_id: Option<String>,
+    model_name: String,
+    mut body: Value,
+) -> Response {
+    // [DEFENSE] 净化 Gemini 原生请求体中的所有 inlineData (过滤或降级空数据/损坏图片)
+    crate::proxy::mappers::common_utils::sanitize_gemini_payload_inline_data(&mut body);
+
+    // 1. 模型路由解析
+    let client_effort = body
+        .get("request")
+        .unwrap_or(&body)
+        .get("generationConfig")
+        .and_then(|gc| gc.get("thinkingConfig"))
+        .and_then(|tc| tc.get("thinkingLevel").or_else(|| tc.get("effort")))
+        .and_then(|v| v.as_str());
+
+    let mapped_model = crate::proxy::common::model_mapping::resolve_model_route_with_effort(
+        &model_name,
+        &*state.custom_mapping.read().await,
+        client_effort,
+    );
+
+    // 2. 解析请求配置并获取 Token
+    let config = crate::proxy::mappers::common_utils::resolve_request_config(
+        &model_name,
+        &mapped_model,
+        &None,
+        None,
+        None,
+        None,
+        Some(&body),
+    );
+
+    let anchor = SessionManager::gemini_content_anchor(&body);
+    let session_scope = crate::proxy::thinking_store::SessionScope::resolve(
+        &headers,
+        Some(&body),
+        None,
+        anchor,
+        tenant_id.as_deref(),
+    );
+
+    let (access_token, _project_id, email, account_id, _wait_ms) = match state
+        .token_manager
+        .get_token(
+            &config.request_type,
+            false,
+            Some(&session_scope.affinity_key),
+            &config.final_model,
+        )
+        .await
+    {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::warn!(
+                "[Gemini] Token acquisition failed for countTokens (error: {}), falling back to PipelineTokenEstimator",
+                e
+            );
+            let local_tokens = crate::proxy::pipeline::estimate_tokens(&body);
+            return (
+                StatusCode::OK,
+                [
+                    ("X-Account-Email", "offline-estimate"),
+                    ("X-Mapped-Model", mapped_model.as_str()),
+                ],
+                Json(json!({ "totalTokens": local_tokens })),
+            )
+                .into_response();
+        }
+    };
+
+    // 3. 包装为 v1internal 格式
+    // [已验证] countTokens 与 generateContent 不同: 顶层只允许 "request" 键,
+    // 携带 model/project 会被上游 400 拒绝 (Unknown name "model"/"project");
+    // request 内的 safetySettings 同样不被接受 (对齐 CLIProxyAPI 的处理)
+    let mut inner_body = body.clone();
+    if let Some(obj) = inner_body.as_object_mut() {
+        obj.remove("safetySettings");
+    }
+    let wrapped_body = json!({
+        "request": inner_body,
+    });
+
+    // 4. 调用上游 v1internal:countTokens
+    let call_result = match state
+        .upstream
+        .call_v1_internal_with_headers(
+            "countTokens",
+            &access_token,
+            wrapped_body,
+            None,
+            std::collections::HashMap::new(),
+            Some(account_id.as_str()),
+        )
+        .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::warn!(
+                "[Gemini] Upstream call error for countTokens ({}), falling back to PipelineTokenEstimator",
+                e
+            );
+            let local_tokens = crate::proxy::pipeline::estimate_tokens(&body);
+            return (
+                StatusCode::OK,
+                [
+                    ("X-Account-Email", email.as_str()),
+                    ("X-Mapped-Model", mapped_model.as_str()),
+                ],
+                Json(json!({ "totalTokens": local_tokens })),
+            )
+                .into_response();
+        }
+    };
+
+    let response = call_result.response;
+    let status = response.status();
+
+    if !status.is_success() {
+        let err_text = response.text().await.unwrap_or_default();
+        tracing::warn!(
+            "[Gemini] Upstream countTokens error (status: {}, body: {}), falling back to PipelineTokenEstimator",
+            status,
+            err_text
+        );
+        let local_tokens = crate::proxy::pipeline::estimate_tokens(&body);
+        return (
+            StatusCode::OK,
+            [
+                ("X-Account-Email", email.as_str()),
+                ("X-Mapped-Model", mapped_model.as_str()),
+            ],
+            Json(json!({ "totalTokens": local_tokens })),
+        )
+            .into_response();
+    }
+
+    let gemini_resp: Value = match response.json().await {
+        Ok(v) => v,
+        Err(e) => {
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": format!("Parse error: {}", e) })),
+            )
+                .into_response();
+        }
+    };
+
+    // 5. 提取 totalTokens (兼容 wrapped / unwrapped 两种响应格式)
+    let total_tokens = gemini_resp
+        .get("response")
+        .and_then(|r| r.get("totalTokens"))
+        .or_else(|| gemini_resp.get("totalTokens"))
+        .and_then(|v| v.as_i64())
+        .unwrap_or(0);
+
+    // 6. 返回标准 Gemini REST 响应
+    (
+        StatusCode::OK,
+        [
+            ("X-Account-Email", email.as_str()),
+            ("X-Mapped-Model", mapped_model.as_str()),
+        ],
+        Json(json!({ "totalTokens": total_tokens })),
+    )
+        .into_response()
+}

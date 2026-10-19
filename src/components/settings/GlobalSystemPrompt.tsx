@@ -1,0 +1,82 @@
+import { useTranslation } from "react-i18next";
+import { GlobalSystemPromptConfig } from "../../types/config";
+
+interface GlobalSystemPromptProps {
+    config: GlobalSystemPromptConfig;
+    onChange: (config: GlobalSystemPromptConfig) => void;
+}
+
+const DEFAULT_CONFIG: GlobalSystemPromptConfig = {
+    enabled: false,
+    content: '',
+};
+
+export default function GlobalSystemPrompt({
+    config = DEFAULT_CONFIG,
+    onChange,
+}: GlobalSystemPromptProps) {
+    const { t } = useTranslation();
+
+    return (
+        <div className="space-y-3">
+            {/* 标题区域 (Compact) */}
+            <div className="flex items-center justify-between gap-3 bg-purple-50/30 dark:bg-purple-900/5 border border-purple-100/50 dark:border-purple-800/20 rounded-lg px-4 py-3">
+                <div className="space-y-0.5">
+                    <h4 className="font-bold text-sm text-gray-900 dark:text-gray-100">
+                        {t("settings.global_system_prompt.title", { defaultValue: "Global System Prompt" })}
+                    </h4>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                        {t("settings.global_system_prompt.hint", { defaultValue: "Automatically injected into all systemInstructions" })}
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <span className={`text-[10px] font-medium ${config.enabled ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}>
+                        {config.enabled ? t("common.enabled", { defaultValue: "Enabled" }) : t("common.disabled", { defaultValue: "Disabled" })}
+                    </span>
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                            type="checkbox"
+                            checked={config.enabled}
+                            onChange={(e) => onChange({ ...config, enabled: e.target.checked })}
+                            className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:after:border-gray-600 peer-checked:bg-purple-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            {/* 编辑区域 (仅在启用时显示) */}
+            {config.enabled && (
+                <div className="space-y-3">
+                    <textarea
+                        value={config.content}
+                        onChange={(e) => onChange({ ...config, content: e.target.value })}
+                        placeholder={t("settings.global_system_prompt.placeholder", {
+                            defaultValue: "Enter global system prompt...\nExample: You are a senior full-stack developer. Please respond in English.",
+                        })}
+                        rows={6}
+                        className="w-full bg-white dark:bg-base-100 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500/20 outline-none transition-all resize-y min-h-[120px]"
+                    />
+                    <div className="flex items-center justify-between">
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                            {t("settings.global_system_prompt.char_count", {
+                                defaultValue: "{{count}} characters",
+                                count: config.content.length,
+                            })}
+                        </p>
+                    </div>
+                    {config.content.length > 2000 && (
+                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-lg p-3">
+                            <p className="text-xs text-amber-700 dark:text-amber-400">
+                                {t("settings.global_system_prompt.long_prompt_warning", {
+                                    defaultValue: "Prompt is quite long (over 2000 chars) and may consume significant context space.",
+                                })}
+                            </p>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
