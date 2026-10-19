@@ -766,6 +766,8 @@ pub fn run() {
             commands::install_bundled_skills,
             commands::set_cli_auto_compact,
             commands::get_cli_auto_compact,
+            commands::set_cli_statusline,
+            commands::get_cli_statusline,
             commands::check_for_updates,
             commands::check_native_update,
             commands::check_homebrew_installation,

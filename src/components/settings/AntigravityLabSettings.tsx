@@ -30,6 +30,7 @@ import {
     Network,
     FileCode,
     RotateCcw,
+    Activity,
     Clock,
     LucideIcon
 } from 'lucide-react';
@@ -655,6 +656,46 @@ export default function AntigravityLabSettings({
         }
     };
 
+    // CLI Status Line (Token, Ctx, tok/s) state
+    const [enableStatusLine, setEnableStatusLine] = useState<boolean>(() => {
+        const saved = localStorage.getItem('antigravity_lab_enable_statusline');
+        return saved !== 'false';
+    });
+    const [isSavingStatusLine, setIsSavingStatusLine] = useState(false);
+
+    useEffect(() => {
+        const fetchStatusLine = async () => {
+            try {
+                const isConfigured = await request<boolean>('get_cli_statusline');
+                if (typeof isConfigured === 'boolean') {
+                    setEnableStatusLine(isConfigured);
+                    localStorage.setItem('antigravity_lab_enable_statusline', String(isConfigured));
+                }
+            } catch (err) {
+                console.warn('Failed to get CLI statusline state:', err);
+            }
+        };
+        fetchStatusLine();
+    }, []);
+
+    const handleToggleStatusLine = (enabled: boolean) => {
+        setEnableStatusLine(enabled);
+        localStorage.setItem('antigravity_lab_enable_statusline', String(enabled));
+    };
+
+    const handleApplyStatusLine = async () => {
+        setIsSavingStatusLine(true);
+        try {
+            const res = await request<string>('set_cli_statusline', { enabled: enableStatusLine });
+            showToast(res || t('settings.lab.statusline_applied', { defaultValue: 'CLI Status Line updated.' }), 'success');
+        } catch (error) {
+            console.error('Failed to configure status line:', error);
+            showToast(`${t('settings.lab.statusline_error', { defaultValue: 'Failed to configure status line' })}: ${error}`, 'error');
+        } finally {
+            setIsSavingStatusLine(false);
+        }
+    };
+
     const activeCount = FEATURE_KEYS.filter(item => currentConfig[item.key]).length;
 
     const handleToggle = (key: keyof AntigravityLabConfig, enabled: boolean) => {
@@ -744,7 +785,12 @@ export default function AntigravityLabSettings({
             } catch (compactErr) {
                 console.warn('Auto compact sync notice:', compactErr);
             }
-            showToast(t('settings.lab.sync_cli_success', { defaultValue: 'Successfully synced experimental features, auto-compaction limit, & bundled skills to Antigravity CLI!' }), 'success');
+            try {
+                await request('set_cli_statusline', { enabled: enableStatusLine });
+            } catch (statusErr) {
+                console.warn('Status line sync notice:', statusErr);
+            }
+            showToast(t('settings.lab.sync_cli_success', { defaultValue: 'Successfully synced experimental features, auto-compaction limit, status line, & bundled skills to Antigravity CLI!' }), 'success');
         } catch (error) {
             console.error('Failed to sync to CLI settings:', error);
             showToast(`${t('settings.lab.sync_cli_error', { defaultValue: 'Failed to sync to CLI settings' })}: ${error}`, 'error');
@@ -988,6 +1034,84 @@ export default function AntigravityLabSettings({
                             className="btn btn-xs btn-outline btn-success rounded-none text-[11px] font-bold uppercase tracking-wider flex items-center gap-1"
                         >
                             {isSavingAutoCompact ? 'Saving...' : 'Apply to CLI'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* CLI Status Line (Real-time Token, Context & Throughput Monitor) */}
+            <div className="bg-sky-50/40 dark:bg-sky-950/20 border border-sky-200/60 dark:border-sky-800/40 rounded-lg p-3.5 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-sky-200/40 dark:border-sky-800/30">
+                    <div className="flex items-start gap-2.5">
+                        <div className="p-1.5 rounded-md bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5">
+                            <Activity size={15} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                                    {isZh ? 'AGY CLI 实时终端状态行 (Token & Ctx Monitor)' : 'AGY CLI Terminal Status Line (Token, Ctx & Throughput)'}
+                                </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 font-semibold border border-sky-200 dark:border-sky-800/40">
+                                    StatusLine
+                                </span>
+                            </div>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
+                                {isZh 
+                                    ? '在终端底部渲染实时的模型名称、当前会话 Token 占用量 (百分比与上下文上限) 以及滚动的生成速度 (tok/s)。由 Antigravity CLI 原生 STDIN JSON 协议驱动。'
+                                    : 'Renders an interactive terminal statusline displaying active model, token usage, context percentage (% of 1M), and rolling generation throughput (tok/s) powered by native CLI STDIN protocol.'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <label className="relative inline-flex items-center cursor-pointer select-none shrink-0 self-end sm:self-center">
+                        <input
+                            type="checkbox"
+                            checked={enableStatusLine}
+                            onChange={(e) => handleToggleStatusLine(e.target.checked)}
+                            className="sr-only peer"
+                        />
+                        <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:after:border-gray-600 peer-checked:bg-sky-600"></div>
+                    </label>
+                </div>
+
+                {/* Status Line Live Terminal Preview */}
+                <div className={`space-y-2.5 transition-all duration-200 ${enableStatusLine ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                            <Terminal size={12} className="text-sky-500" />
+                            {isZh ? '终端状态行实时视觉预览 (Live Preview)' : 'Terminal Visual Preview'}
+                        </span>
+                        <span className="text-[10px] font-mono text-gray-400 dark:text-gray-500">
+                            ~/.gemini/antigravity-cli/statusline.py
+                        </span>
+                    </div>
+
+                    {/* Mock Terminal Bar */}
+                    <div className="bg-neutral-900 border border-neutral-700/80 rounded-md px-3 py-2 font-mono text-xs flex items-center justify-between shadow-inner select-none overflow-x-auto">
+                        <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span className="text-cyan-400 font-bold">Gemini 3 Flash</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                            <span className="text-amber-400 font-medium">ctx: 45.2k (4.4% of 1M)</span>
+                            <span className="text-neutral-500">|</span>
+                            <span className="text-emerald-400 font-bold">88 tok/s</span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                        <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                            {isZh 
+                                ? '开启后会自动写入 CLI 配置中的 statusLine 字段，并在每次对话交互后自动刷新。' 
+                                : 'Writes statusLine command configuration to CLI settings; auto-updates on every conversation turn.'}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={handleApplyStatusLine}
+                            disabled={isSavingStatusLine}
+                            className="btn btn-xs btn-outline btn-info rounded-none text-[11px] font-bold uppercase tracking-wider flex items-center gap-1"
+                        >
+                            {isSavingStatusLine ? 'Saving...' : 'Apply to CLI'}
                         </button>
                     </div>
                 </div>

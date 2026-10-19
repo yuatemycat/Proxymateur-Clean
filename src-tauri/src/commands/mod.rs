@@ -1386,6 +1386,74 @@ pub async fn get_cli_auto_compact() -> Result<Option<u32>, String> {
     }
 }
 
+/// 安装/配置 Antigravity CLI 状态行 (Token, Ctx, tok/s StatusLine)
+#[tauri::command]
+pub async fn set_cli_statusline(enabled: bool) -> Result<String, String> {
+    let home = dirs::home_dir().ok_or_else(|| "Failed to determine user home directory".to_string())?;
+    let cli_dir = home.join(".gemini").join("antigravity-cli");
+    std::fs::create_dir_all(&cli_dir)
+        .map_err(|e| format!("Failed to create cli dir: {}", e))?;
+
+    let statusline_script_path = cli_dir.join("statusline.py");
+    let statusline_code = include_str!("../../../scripts/statusline.py");
+    std::fs::write(&statusline_script_path, statusline_code)
+        .map_err(|e| format!("Failed to write statusline.py: {}", e))?;
+
+    let settings_path = cli_dir.join("settings.json");
+    let mut json_val: serde_json::Value = if settings_path.exists() {
+        let content = std::fs::read_to_string(&settings_path)
+            .map_err(|e| format!("Failed to read CLI settings.json: {}", e))?;
+        serde_json::from_str(&content).unwrap_or(serde_json::json!({}))
+    } else {
+        serde_json::json!({})
+    };
+
+    if !json_val.is_object() {
+        json_val = serde_json::json!({});
+    }
+
+    let map = json_val.as_object_mut().unwrap();
+    if enabled {
+        let status_cmd = format!("python \"{}\"", statusline_script_path.to_string_lossy());
+        map.insert("statusLine".to_string(), serde_json::json!({
+            "type": "command",
+            "command": status_cmd
+        }));
+    } else {
+        map.remove("statusLine");
+    }
+
+    let formatted = serde_json::to_string_pretty(&json_val)
+        .map_err(|e| format!("Failed to serialize CLI settings.json: {}", e))?;
+
+    std::fs::write(&settings_path, formatted)
+        .map_err(|e| format!("Failed to write CLI settings.json: {}", e))?;
+
+    Ok(format!(
+        "CLI Status Line successfully {}",
+        if enabled { "enabled" } else { "disabled" }
+    ))
+}
+
+/// 读取 Antigravity CLI 状态行当前配置状态
+#[tauri::command]
+pub async fn get_cli_statusline() -> Result<bool, String> {
+    let home = dirs::home_dir().ok_or_else(|| "Failed to determine user home directory".to_string())?;
+    let settings_path = home.join(".gemini").join("antigravity-cli").join("settings.json");
+
+    if !settings_path.exists() {
+        return Ok(false);
+    }
+
+    let content = std::fs::read_to_string(&settings_path)
+        .map_err(|e| format!("Failed to read CLI settings.json: {}", e))?;
+
+    let json_val: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse CLI settings.json: {}", e))?;
+
+    Ok(json_val.get("statusLine").is_some())
+}
+
 /// 检测更新响应结构
 pub use crate::modules::update_checker::UpdateInfo;
 

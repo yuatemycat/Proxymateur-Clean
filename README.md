@@ -83,6 +83,15 @@ Includes the bundled productivity and agent orchestration skills in the `skills/
 bash skills/install_skills.sh
 ```
 
+### 6. 📊 Real-Time CLI Status Line (Token, Ctx & Throughput Monitor)
+- **Live Terminal Telemetry**: Seamlessly injects a dynamic, ANSI-colored statusline into Antigravity CLI via standard STDIN JSON piping:
+  ```
+  Gemini 3 Flash               ctx: 45.2k (4.4% of 1M) | 88 tok/s
+  ```
+- **Real-Time Context Tracking**: Displays current token consumption, percentage of context window used (`% of 1M`), and rolling generation throughput (`tok/s`) calculated from conversation transcript timestamps.
+- **Cross-Platform & Portable**: Lightweight Python script (`scripts/statusline.py`) supporting Windows named pipes (`PeekNamedPipe`) and POSIX (`select.select`) with zero third-party dependencies.
+- **1-Click Synchronization**: Toggle and apply with a single click inside **Settings → Antigravity Lab**, or bundle it with experimental flags and skills sync.
+
 ---
 
 ## 🔑 Bring-Your-Own (BYO) OAuth 2.0 Setup
