@@ -61,9 +61,6 @@ Unlike commercial relays or bloated proxies, **Proxymateur-Clean**:
 | **Real-Time Terminal Status Line** | ✅ **Included** | ✅ | Live terminal telemetry showing active model, context window usage (`ctx: 45.2k (4.4% of 1M)`), and rolling generation throughput (`88 tok/s`) using Hermes-style timestamp math. |
 | **Asynchronous Non-Blocking MCP** | ✅ **Included** | ✅ | `--enable-mcp-non-blocking-turn-load` loads MCP tool schemas asynchronously in the background so turns never freeze on slow servers. |
 | **Native Stdio MCP Server** | ✅ **Included** | ✅ | Built-in `proxymateur mcp` allows external AI agents (Claude Code, Cursor, OpenCode, Antigravity) to query quotas and hot-swap accounts mid-session. |
-| ~~**Auto JB / Persona Injection**~~ | ❌ *Excluded* | 🔒 *Private* | Strikethrough-ed to maintain complete compliance with upstream terms. |
-| ~~**Reverse Proxy Relay (Port 8045)**~~ | ❌ *Excluded* | 🔒 *Private* | Stripped out: no local relay port, no traffic interception, pure direct BYO OAuth. |
-| ~~**Virtual Custom Model Spoofing**~~ | ❌ *Excluded* | 🔒 *Private* | Native official Gemini models only. |
 
 ---
 
