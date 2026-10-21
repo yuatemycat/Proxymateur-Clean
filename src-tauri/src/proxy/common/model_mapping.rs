@@ -529,6 +529,13 @@ pub async fn get_all_dynamic_models(
             sorted_ids.push(vertex_model);
         }
     }
+
+    // 6. OpenAI 协议直连上游暴露的模型 (NVIDIA NIM / DeepSeek / Ollama)
+    for openai_model in crate::proxy::openai_upstream::exposed_model_ids() {
+        if !sorted_ids.contains(&openai_model) {
+            sorted_ids.push(openai_model);
+        }
+    }
     sorted_ids.sort();
     sorted_ids
 }

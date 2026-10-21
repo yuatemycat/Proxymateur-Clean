@@ -136,6 +136,21 @@ pub async fn handle_generate(
         ));
     }
 
+    // OpenAI 协议直连 (NVIDIA NIM / DeepSeek / Ollama)
+    let openai_route = crate::proxy::openai_upstream::resolve_route(
+        &crate::proxy::openai_upstream::get_config(),
+        &model_name,
+    );
+    if let Some(route) = openai_route {
+        match crate::proxy::openai_upstream::handle_generate(&route, &method, &body).await {
+            Ok(response) => return Ok(response.into_response()),
+            Err((status, msg)) => {
+                tracing::error!("[OpenAI-Upstream] Request failed: {} - {}", status, msg);
+                return Err((status, msg));
+            }
+        }
+    }
+
     // Vertex AI 直连：命中路由的模型可走用户自己的 GCP 项目。
     // Vertex 优先时先在这里尝试，Vertex 侧不可用再落到下面的账号池；账号池优先时反过来。
     let vertex_route =

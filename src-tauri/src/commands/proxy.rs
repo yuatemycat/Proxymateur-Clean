@@ -314,6 +314,7 @@ pub async fn ensure_admin_server(
     crate::proxy::update_image_thinking_mode(config.image_thinking_mode.clone());
     crate::proxy::update_multimodal_config(config.multimodal.clone());
     crate::proxy::vertex::update_config(config.vertex.clone());
+    crate::proxy::openai_upstream::update_config(config.openai.clone());
     crate::proxy::config::update_global_audit_config(
         config.experimental.payload_storage_mode.clone(),
         config.experimental.log_retention_days,

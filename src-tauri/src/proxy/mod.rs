@@ -21,6 +21,7 @@ pub mod mappers; // 协议转换器
 pub mod middleware; // Axum 中间件
 pub mod model_specs; // 模型规格管理 (v4.1.29)
 pub mod monitor; // 监控
+pub mod openai_upstream; // OpenAI 协议直连上游 (NVIDIA NIM / DeepSeek / Ollama)
 pub mod openclaw_sync; // OpenClaw 配置同步
 pub mod opencode_sync; // OpenCode 配置同步
 pub mod payload_audit; // 报文审计：头脱敏 / 简要存储

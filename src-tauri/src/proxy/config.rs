@@ -990,6 +990,10 @@ pub struct ProxyConfig {
     #[serde(default)]
     pub vertex: crate::proxy::vertex::VertexConfig,
 
+    /// OpenAI 协议直连上游配置 (NVIDIA NIM / DeepSeek / Ollama)
+    #[serde(default)]
+    pub openai: crate::proxy::openai_upstream::OpenAiUpstreamConfig,
+
     /// 网关路由范围 (Gateway Routing Scope)
     /// - "all" (默认): 全量路由代理
     /// - "argon_only": 仅对 Gemini 4 Argon 生效代理 (Vertex)，其余模型直连原生账号
@@ -1142,6 +1146,7 @@ impl Default for ProxyConfig {
             proxy_pool: ProxyPoolConfig::default(),
             multimodal: MultimodalConfig::default(),
             vertex: crate::proxy::vertex::VertexConfig::default(),
+            openai: crate::proxy::openai_upstream::OpenAiUpstreamConfig::default(),
             image_thinking_mode: None,
             image_scheduler: ImageSchedulerConfig::default(),
             gateway_routing_mode: Some("all".to_string()),
