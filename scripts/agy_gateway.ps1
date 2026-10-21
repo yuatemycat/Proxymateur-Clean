@@ -272,9 +272,12 @@ if (-not $useNative) {
                elseif ($resp.models) { @($resp.models | ForEach-Object { ($_.name -replace '^models/', '') }) }
                else { @() }
         $isArgonOnly = ($proxyCfg.gateway_routing_mode -eq 'argon_only') -or ($modeOverride -eq 'argon_only')
+        $openaiModelIds = if ($proxyCfg.openai -and $proxyCfg.openai.enabled -and $proxyCfg.openai.routes) {
+            @($proxyCfg.openai.routes | ForEach-Object { $_.model_id })
+        } else { @() }
         $include = if ($isArgonOnly) { '^gemini-4-argon' } elseif ($env:PROXYMATEUR_AGY_INCLUDE) { $env:PROXYMATEUR_AGY_INCLUDE } else { '^(gemini|claude|gpt|deepseek)-|deepseek-ai/|openai/' }
         $exclude = if ($env:PROXYMATEUR_AGY_EXCLUDE) { $env:PROXYMATEUR_AGY_EXCLUDE } else { 'image|imagen|embed|tts|audio|veo|live|omni|-exp|tiered|carbon|gemini-argon$|claude-(?:opus|sonnet)-(?:[45])|gpt-oss|\*|\.x(-|$)' }
-        $models = @($ids | Where-Object { $_ -and ($_ -match $include) -and ($_ -notmatch $exclude) } | Sort-Object -Unique)
+        $models = @($ids | Where-Object { $_ -and (($_ -match $include) -or ($openaiModelIds -contains $_)) -and ($_ -notmatch $exclude) } | Sort-Object -Unique)
         if ($isArgonOnly -and ($models.Count -eq 0)) {
             $models = @('gemini-4-argon', 'gemini-4-argon-high', 'gemini-4-argon-medium', 'gemini-4-argon-low')
         } elseif ($models -contains 'gemini-4-argon' -and ($models -notcontains 'gemini-4-argon-high')) {
