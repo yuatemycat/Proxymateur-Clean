@@ -82,10 +82,13 @@ pub async fn handle_generate(
     let clean_start = std::time::Instant::now();
 
     // 解析 model:method
-    let (model_name, method) = if let Some((m, action)) = model_action.rsplit_once(':') {
+    let raw_action = model_action.trim_start_matches('/');
+    let (model_name, method) = if let Some(m) = raw_action.strip_suffix("/countTokens") {
+        (m.to_string(), "countTokens".to_string())
+    } else if let Some((m, action)) = raw_action.rsplit_once(':') {
         (m.to_string(), action.to_string())
     } else {
-        (model_action, "generateContent".to_string())
+        (raw_action.to_string(), "generateContent".to_string())
     };
 
     crate::modules::logger::log_info(&format!(
@@ -1496,6 +1499,7 @@ pub async fn handle_get_model(
 ) -> impl IntoResponse {
     use crate::proxy::common::model_mapping::find_dynamic_model;
 
+    let model_name = model_name.trim_start_matches('/').to_string();
     let only_raw = *state.only_raw_quota_models.read().await;
     if let Some(matched_id) = find_dynamic_model(
         &state.custom_mapping,
@@ -1512,6 +1516,27 @@ pub async fn handle_get_model(
                 "version": "001",
                 "displayName": matched_id,
                 "description": "",
+                "inputTokenLimit": 128000,
+                "outputTokenLimit": 8192,
+                "supportedGenerationMethods": ["generateContent", "countTokens"],
+                "temperature": 1.0,
+                "topP": 0.95,
+                "topK": 64
+            })),
+        )
+            .into_response()
+    } else if let Some(route) = crate::proxy::openai_upstream::resolve_route(
+        &crate::proxy::openai_upstream::get_config(),
+        &model_name,
+    ) {
+        let clean_name = model_name.strip_prefix("models/").unwrap_or(&model_name);
+        (
+            StatusCode::OK,
+            Json(json!({
+                "name": format!("models/{}", clean_name),
+                "version": "001",
+                "displayName": clean_name,
+                "description": format!("OpenAI Upstream Route: {}", route.upstream_model),
                 "inputTokenLimit": 128000,
                 "outputTokenLimit": 8192,
                 "supportedGenerationMethods": ["generateContent", "countTokens"],

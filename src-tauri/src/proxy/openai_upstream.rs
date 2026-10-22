@@ -18,18 +18,49 @@ use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+/// Individual route entry from GUI
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct OpenAiRouteConfig {
+    pub model_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub upstream_model: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub api_key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timeout_secs: Option<u64>,
+}
+
+fn default_timeout_secs() -> u64 {
+    120
+}
+
 /// OpenAI Upstream Configuration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct OpenAiUpstreamConfig {
     pub enabled: bool,
     /// Upstream base URL (e.g. "https://integrate.api.nvidia.com/v1" or "https://api.deepseek.com/v1")
+    #[serde(alias = "default_base_url")]
     pub base_url: String,
     /// API key (falls back to NVIDIA_API_KEY / OPENAI_API_KEY environment variables if empty)
+    #[serde(alias = "default_api_key")]
     pub api_key: String,
+    /// Default request timeout
+    #[serde(default = "default_timeout_secs")]
+    pub default_timeout_secs: u64,
+    /// Optional prefix for auto-detecting OpenAI upstream routes
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_route_prefix: Option<String>,
+    /// Configured routes from GUI
+    #[serde(default)]
+    pub routes: Vec<OpenAiRouteConfig>,
     /// Exposed models to advertise to agy CLI / UI dropdown
+    #[serde(default)]
     pub exposed_models: Vec<String>,
     /// Client model name -> Upstream model ID mapping (supports trailing `*` wildcard)
+    #[serde(default)]
     pub model_mapping: HashMap<String, String>,
 }
 
@@ -39,6 +70,9 @@ impl Default for OpenAiUpstreamConfig {
             enabled: false,
             base_url: String::new(),
             api_key: String::new(),
+            default_timeout_secs: 120,
+            auto_route_prefix: None,
+            routes: Vec::new(),
             exposed_models: Vec::new(),
             model_mapping: HashMap::new(),
         }
@@ -57,11 +91,23 @@ pub fn get_config() -> OpenAiUpstreamConfig {
 }
 
 /// Update global OpenAI upstream configuration
-pub fn update_config(config: OpenAiUpstreamConfig) {
+pub fn update_config(mut config: OpenAiUpstreamConfig) {
+    for route in &config.routes {
+        let m_id = route.model_id.trim().to_string();
+        if !m_id.is_empty() {
+            if !config.exposed_models.contains(&m_id) {
+                config.exposed_models.push(m_id.clone());
+            }
+            if let Some(up) = &route.upstream_model {
+                config.model_mapping.insert(m_id, up.clone());
+            }
+        }
+    }
     tracing::info!(
-        "[OpenAI-Upstream] Config updated: enabled={}, base_url={}, exposed_models={:?}, mappings={}",
+        "[OpenAI-Upstream] Config updated: enabled={}, base_url={}, routes={}, exposed_models={:?}, mappings={}",
         config.enabled,
         config.base_url,
+        config.routes.len(),
         config.exposed_models,
         config.model_mapping.len()
     );
@@ -81,6 +127,12 @@ pub fn exposed_model_ids() -> Vec<String> {
         return Vec::new();
     }
     let mut models = Vec::new();
+    for r in &config.routes {
+        let trimmed = r.model_id.trim().to_string();
+        if !trimmed.is_empty() && !models.contains(&trimmed) {
+            models.push(trimmed);
+        }
+    }
     for m in &config.exposed_models {
         let trimmed = m.trim().to_string();
         if !trimmed.is_empty() && !models.contains(&trimmed) {
@@ -115,56 +167,76 @@ pub fn resolve_route(config: &OpenAiUpstreamConfig, client_model: &str) -> Optio
         .trim_start_matches("models/")
         .to_lowercase();
 
-    // 1. Exact match in model_mapping
-    let mapped = config
-        .model_mapping
-        .iter()
-        .find(|(key, _)| key.trim().to_lowercase() == requested)
-        .map(|(_, val)| val.clone());
+    // 0. Check explicit routes configured via GUI
+    let route_match = config.routes.iter().find(|r| {
+        let id = r.model_id.trim().trim_start_matches("models/").to_lowercase();
+        id == requested || (id.ends_with('*') && requested.starts_with(id.trim_end_matches('*')))
+    });
 
-    // 2. Exact match in exposed_models
-    let exposed = config
-        .exposed_models
-        .iter()
-        .find(|m| m.trim().to_lowercase() == requested)
-        .map(|m| m.trim().to_string());
-
-    // 3. Wildcard prefix match in model_mapping
-    let wildcard = config
-        .model_mapping
-        .iter()
-        .filter_map(|(key, val)| {
-            let prefix = key.trim().strip_suffix('*')?.to_lowercase();
-            if requested.starts_with(&prefix) {
-                Some((prefix.len(), val.clone()))
-            } else {
-                None
-            }
-        })
-        .max_by_key(|(len, _)| *len)
-        .map(|(_, val)| val);
-
-    // 4. Auto-detect models with explicit openai/ prefix
-    let auto_detect = if requested.starts_with("openai/") {
-        Some(client_model.trim().trim_start_matches("models/").to_string())
+    let (mut upstream_model, route_base_url, route_api_key) = if let Some(r) = route_match {
+        let up = r.upstream_model.as_deref().unwrap_or(&r.model_id).trim().to_string();
+        (up, r.base_url.clone(), r.api_key.clone())
     } else {
-        None
+        // 1. Exact match in model_mapping
+        let mapped = config
+            .model_mapping
+            .iter()
+            .find(|(key, _)| key.trim().to_lowercase() == requested)
+            .map(|(_, val)| val.clone());
+
+        // 2. Exact match in exposed_models
+        let exposed = config
+            .exposed_models
+            .iter()
+            .find(|m| m.trim().to_lowercase() == requested)
+            .map(|m| m.trim().to_string());
+
+        // 3. Wildcard prefix match in model_mapping
+        let wildcard = config
+            .model_mapping
+            .iter()
+            .filter_map(|(key, val)| {
+                let prefix = key.trim().strip_suffix('*')?.to_lowercase();
+                if requested.starts_with(&prefix) {
+                    Some((prefix.len(), val.clone()))
+                } else {
+                    None
+                }
+            })
+            .max_by_key(|(len, _)| *len)
+            .map(|(_, val)| val);
+
+        // 4. Auto-detect models with explicit openai/ prefix
+        let auto_detect = if requested.starts_with("openai/") {
+            Some(client_model.trim().trim_start_matches("models/").to_string())
+        } else {
+            None
+        };
+
+        let up = mapped.or(exposed).or(wildcard).or(auto_detect)?;
+        (up, None, None)
     };
 
-    let upstream_model = mapped
-        .or(exposed)
-        .or(wildcard)
-        .or(auto_detect)?;
+    if upstream_model.starts_with("openai/") {
+        upstream_model = upstream_model.strip_prefix("openai/").unwrap().to_string();
+    }
 
     // Resolve API key
-    let mut api_key = config.api_key.trim().to_string();
+    let mut api_key = route_api_key
+        .unwrap_or_else(|| config.api_key.clone())
+        .trim()
+        .to_string();
     if api_key.is_empty() {
         if let Ok(env_key) = std::env::var("OPENAI_API_KEY") {
             api_key = env_key.trim().to_string();
         }
     }
 
-    let base_url = config.base_url.trim().trim_end_matches('/').to_string();
+    let base_url = route_base_url
+        .unwrap_or_else(|| config.base_url.clone())
+        .trim()
+        .trim_end_matches('/')
+        .to_string();
     if base_url.is_empty() {
         return None;
     }
@@ -715,6 +787,9 @@ mod tests {
             enabled: true,
             base_url: "https://integrate.api.nvidia.com/v1".to_string(),
             api_key: "test-key".to_string(),
+            default_timeout_secs: 120,
+            auto_route_prefix: Some("openai/".to_string()),
+            routes: vec![],
             exposed_models: vec!["deepseek-ai/deepseek-v4.1-flash".to_string()],
             model_mapping: {
                 let mut m = HashMap::new();
