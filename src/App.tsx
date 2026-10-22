@@ -5,7 +5,6 @@ import Dashboard from './pages/Dashboard';
 import Accounts from './pages/Accounts';
 import Settings from './pages/Settings';
 import Readme from './pages/Readme';
-import AgyChats from './pages/AgyChats';
 import ThemeManager from './components/common/ThemeManager';
 import { UpdateNotification } from './components/UpdateNotification';
 import SuggestionDeleteThinkingModal from './components/common/SuggestionDeleteThinkingModal';
@@ -31,10 +30,6 @@ const router = createBrowserRouter([
       {
         path: 'accounts',
         element: <Accounts />,
-      },
-      {
-        path: 'chats/agy',
-        element: <AgyChats />,
       },
       {
         path: 'readme',
