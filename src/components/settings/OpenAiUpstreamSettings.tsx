@@ -97,10 +97,27 @@ const PRESETS: PresetOption[] = [
 ];
 
 export default function OpenAiUpstreamSettings({
-    config = DEFAULT_OPENAI_CONFIG,
+    config,
     onChange
 }: OpenAiUpstreamSettingsProps) {
     const { t: _t } = { t: (k: string, f?: string) => f || k };
+
+    // Defensive normalization against legacy config schemas or undefined properties
+    const safeConfig: OpenAiUpstreamConfig = {
+        enabled: config?.enabled ?? DEFAULT_OPENAI_CONFIG.enabled,
+        default_base_url: config?.default_base_url || (config as any)?.base_url || DEFAULT_OPENAI_CONFIG.default_base_url,
+        default_api_key: config?.default_api_key || (config as any)?.api_key || '',
+        default_timeout_secs: config?.default_timeout_secs ?? 120,
+        auto_route_prefix: config?.auto_route_prefix ?? 'openai/',
+        routes: Array.isArray(config?.routes)
+            ? config.routes
+            : (Array.isArray((config as any)?.exposed_models) && (config as any).exposed_models.length > 0)
+                ? (config as any).exposed_models.map((m: string) => ({
+                    model_id: m,
+                    upstream_model: (config as any)?.model_mapping?.[m] || m
+                }))
+                : DEFAULT_OPENAI_CONFIG.routes
+    };
 
     const [showDefaultKey, setShowDefaultKey] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
@@ -123,7 +140,7 @@ export default function OpenAiUpstreamSettings({
     const [modalProbeResult, setModalProbeResult] = useState<ProbeResult | null>(null);
 
     const updateConfig = (updates: Partial<OpenAiUpstreamConfig>) => {
-        onChange({ ...config, ...updates });
+        onChange({ ...safeConfig, ...updates });
     };
 
     const handleOpenAdd = () => {
@@ -139,7 +156,7 @@ export default function OpenAiUpstreamSettings({
     };
 
     const handleOpenEdit = (index: number) => {
-        const route = config.routes[index];
+        const route = safeConfig.routes[index];
         if (!route) return;
         setEditingIndex(index);
         setFormModelId(route.model_id);
@@ -176,7 +193,7 @@ export default function OpenAiUpstreamSettings({
             timeout_secs: typeof formTimeout === 'number' && formTimeout > 0 ? formTimeout : undefined
         };
 
-        const currentRoutes = [...config.routes];
+        const currentRoutes = [...safeConfig.routes];
         if (editingIndex !== null && editingIndex >= 0 && editingIndex < currentRoutes.length) {
             currentRoutes[editingIndex] = newRoute;
         } else {
@@ -194,16 +211,16 @@ export default function OpenAiUpstreamSettings({
     };
 
     const handleDeleteRoute = (index: number) => {
-        const route = config.routes[index];
+        const route = safeConfig.routes[index];
         if (!route) return;
-        const nextRoutes = config.routes.filter((_, idx) => idx !== index);
+        const nextRoutes = safeConfig.routes.filter((_, idx) => idx !== index);
         updateConfig({ routes: nextRoutes });
         showToast(`Removed model "${route.model_id}"`, 'info');
     };
 
     const handleTestRoute = async (route: OpenAiRoute) => {
-        const baseUrl = route.base_url || config.default_base_url;
-        const apiKey = route.api_key || config.default_api_key;
+        const baseUrl = route.base_url || safeConfig.default_base_url;
+        const apiKey = route.api_key || safeConfig.default_api_key;
         const model = route.upstream_model || route.model_id;
 
         if (!baseUrl) {
@@ -237,8 +254,8 @@ export default function OpenAiUpstreamSettings({
     };
 
     const handleModalTest = async () => {
-        const baseUrl = formBaseUrl.trim() || config.default_base_url;
-        const apiKey = formApiKey.trim() || config.default_api_key;
+        const baseUrl = formBaseUrl.trim() || safeConfig.default_base_url;
+        const apiKey = formApiKey.trim() || safeConfig.default_api_key;
         const model = formUpstreamModel.trim() || formModelId.trim();
 
         if (!model) {
@@ -283,12 +300,12 @@ export default function OpenAiUpstreamSettings({
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                     <span className="text-xs font-mono font-bold uppercase text-base-content/70">
-                        {config.enabled ? 'ACTIVE' : 'DISABLED'}
+                        {safeConfig.enabled ? 'ACTIVE' : 'DISABLED'}
                     </span>
                     <input
                         type="checkbox"
                         className="toggle toggle-sm toggle-success"
-                        checked={config.enabled}
+                        checked={safeConfig.enabled}
                         onChange={(e) => updateConfig({ enabled: e.target.checked })}
                     />
                 </div>
@@ -312,7 +329,7 @@ export default function OpenAiUpstreamSettings({
                             type="text"
                             className="input input-sm w-full rounded-none border border-base-content/40 bg-base-200 text-base-content font-mono text-xs focus:outline-none focus:border-base-content"
                             placeholder="https://integrate.api.nvidia.com/v1"
-                            value={config.default_base_url}
+                            value={safeConfig.default_base_url}
                             onChange={(e) => updateConfig({ default_base_url: e.target.value })}
                         />
                         <p className="text-[11px] text-base-content/50 mt-1">
@@ -329,7 +346,7 @@ export default function OpenAiUpstreamSettings({
                                 type={showDefaultKey ? 'text' : 'password'}
                                 className="input input-sm w-full rounded-none border border-base-content/40 bg-base-200 text-base-content font-mono text-xs pr-8 focus:outline-none focus:border-base-content"
                                 placeholder="nvapi-... / sk-..."
-                                value={config.default_api_key}
+                                value={safeConfig.default_api_key}
                                 onChange={(e) => updateConfig({ default_api_key: e.target.value })}
                             />
                             <button
@@ -353,7 +370,7 @@ export default function OpenAiUpstreamSettings({
                             type="text"
                             className="input input-sm w-full rounded-none border border-base-content/40 bg-base-200 text-base-content font-mono text-xs focus:outline-none focus:border-base-content"
                             placeholder="openai/"
-                            value={config.auto_route_prefix || ''}
+                            value={safeConfig.auto_route_prefix || ''}
                             onChange={(e) => updateConfig({ auto_route_prefix: e.target.value || undefined })}
                         />
                         <p className="text-[11px] text-base-content/50 mt-1">
@@ -369,7 +386,7 @@ export default function OpenAiUpstreamSettings({
                             type="number"
                             className="input input-sm w-full rounded-none border border-base-content/40 bg-base-200 text-base-content font-mono text-xs focus:outline-none focus:border-base-content"
                             placeholder="120"
-                            value={config.default_timeout_secs}
+                            value={safeConfig.default_timeout_secs}
                             onChange={(e) => updateConfig({ default_timeout_secs: parseInt(e.target.value, 10) || 60 })}
                         />
                         <p className="text-[11px] text-base-content/50 mt-1">
@@ -385,7 +402,7 @@ export default function OpenAiUpstreamSettings({
                     <div>
                         <h4 className="text-xs font-black uppercase tracking-wider text-base-content flex items-center gap-2">
                             <Activity className="w-4 h-4 text-lime-signal" />
-                            Registered Model Routes ({config.routes.length})
+                            Registered Model Routes ({safeConfig.routes.length})
                         </h4>
                         <p className="text-[11px] text-base-content/60">
                             Models listed here automatically appear in the <span className="font-mono">/models</span> catalog and Antigravity CLI model picker.
@@ -401,7 +418,7 @@ export default function OpenAiUpstreamSettings({
                     </button>
                 </div>
 
-                {config.routes.length === 0 ? (
+                {safeConfig.routes.length === 0 ? (
                     <div className="p-8 text-center border border-dashed border-base-content/30 bg-base-content/[0.02]">
                         <Server className="w-8 h-8 text-base-content/30 mx-auto mb-2" />
                         <p className="text-xs font-bold uppercase tracking-wide text-base-content/60">
@@ -413,7 +430,7 @@ export default function OpenAiUpstreamSettings({
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-3">
-                        {config.routes.map((route, index) => {
+                        {safeConfig.routes.map((route, index) => {
                             const isProbing = probingMap[route.model_id];
                             const probeRes = probeResultMap[route.model_id];
                             return (
@@ -448,7 +465,7 @@ export default function OpenAiUpstreamSettings({
                                         </div>
 
                                         <div className="text-[11px] font-mono text-base-content/60 truncate">
-                                            Endpoint: {route.base_url || config.default_base_url || 'N/A'}
+                                            Endpoint: {route.base_url || safeConfig.default_base_url || 'N/A'}
                                         </div>
 
                                         {probeRes && (
@@ -590,7 +607,7 @@ export default function OpenAiUpstreamSettings({
                             <input
                                 type="text"
                                 className="input input-sm w-full rounded-none border border-base-content/40 bg-base-200 text-base-content font-mono text-xs focus:outline-none focus:border-base-content"
-                                placeholder={config.default_base_url || 'https://integrate.api.nvidia.com/v1'}
+                                placeholder={safeConfig.default_base_url || 'https://integrate.api.nvidia.com/v1'}
                                 value={formBaseUrl}
                                 onChange={(e) => setFormBaseUrl(e.target.value)}
                             />
@@ -625,7 +642,7 @@ export default function OpenAiUpstreamSettings({
                             <input
                                 type="number"
                                 className="input input-sm w-full rounded-none border border-base-content/40 bg-base-200 text-base-content font-mono text-xs focus:outline-none focus:border-base-content"
-                                placeholder={String(config.default_timeout_secs || 120)}
+                                placeholder={String(safeConfig.default_timeout_secs || 120)}
                                 value={formTimeout}
                                 onChange={(e) => setFormTimeout(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                             />
