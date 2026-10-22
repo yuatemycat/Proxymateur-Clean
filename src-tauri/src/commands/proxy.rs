@@ -852,3 +852,80 @@ pub async fn get_proxy_pool_config(
 pub async fn get_proxy_db_disk_size() -> Result<u64, String> {
     crate::modules::proxy_db::get_proxy_db_disk_bytes()
 }
+
+/// 测试 OpenAI 兼容端点连通性与模型可用性
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpenAiProbeResult {
+    pub ok: bool,
+    pub latency_ms: u64,
+    pub message: String,
+}
+
+#[tauri::command]
+pub async fn test_openai_upstream_route(
+    base_url: String,
+    api_key: String,
+    model: String,
+) -> Result<OpenAiProbeResult, String> {
+    let start = std::time::Instant::now();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {e}"))?;
+
+    let trimmed_base = base_url.trim().trim_end_matches('/');
+    let url = if trimmed_base.ends_with("/chat/completions") {
+        trimmed_base.to_string()
+    } else {
+        format!("{}/chat/completions", trimmed_base)
+    };
+
+    let body = serde_json::json!({
+        "model": model.trim(),
+        "messages": [
+            { "role": "user", "content": "ping" }
+        ],
+        "max_tokens": 5,
+        "stream": false
+    });
+
+    let mut req = client.post(&url).json(&body);
+    let key = api_key.trim();
+    if !key.is_empty() {
+        req = req.header("Authorization", format!("Bearer {}", key));
+    }
+
+    match req.send().await {
+        Ok(resp) => {
+            let status = resp.status();
+            let latency_ms = start.elapsed().as_millis() as u64;
+            if status.is_success() {
+                Ok(OpenAiProbeResult {
+                    ok: true,
+                    latency_ms,
+                    message: format!("HTTP {} OK", status.as_u16()),
+                })
+            } else {
+                let err_text = resp.text().await.unwrap_or_default();
+                let short_err = if err_text.len() > 180 {
+                    format!("{}...", &err_text[..180])
+                } else {
+                    err_text
+                };
+                Ok(OpenAiProbeResult {
+                    ok: false,
+                    latency_ms,
+                    message: format!("HTTP {}: {}", status.as_u16(), short_err),
+                })
+            }
+        }
+        Err(e) => {
+            let latency_ms = start.elapsed().as_millis() as u64;
+            Ok(OpenAiProbeResult {
+                ok: false,
+                latency_ms,
+                message: format!("Network/Connect error: {}", e),
+            })
+        }
+    }
+}

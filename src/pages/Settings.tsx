@@ -12,6 +12,7 @@ import PinnedQuotaModels from '../components/settings/PinnedQuotaModels';
 import LowQuotaAlertSettings from '../components/settings/LowQuotaAlertSettings';
 import AntigravityLabSettings from '../components/settings/AntigravityLabSettings';
 import OAuthSettings from '../components/settings/OAuthSettings';
+import OpenAiUpstreamSettings from '../components/settings/OpenAiUpstreamSettings';
 import { useDebugConsole } from '../stores/useDebugConsole';
 
 import { useTranslation } from 'react-i18next';
@@ -43,7 +44,7 @@ function Settings() {
     const { t } = useTranslation();
     const { config, loadConfig, saveConfig, updateTheme } = useConfigStore();
     const { enable, disable, isEnabled } = useDebugConsole();
-    const [activeTab, setActiveTab] = useState<'general' | 'account' | 'oauth' | 'advanced' | 'debug' | 'about'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'account' | 'oauth' | 'openai' | 'advanced' | 'debug' | 'about'>('general');
     const [appVersion, setAppVersion] = useState<string>('1.0.1');
     const [formData, setFormData] = useState<AppConfig>({
         language: 'en',
@@ -528,6 +529,15 @@ function Settings() {
                             onClick={() => startTransition(() => setActiveTab('oauth'))}
                         >
                             {t('settings.tabs.oauth', 'OAuth')}
+                        </button>
+                        <button
+                            className={`px-5 py-2.5 rounded-none text-xs font-black uppercase tracking-[0.18em] transition-colors border-b-4 -mb-1 ${activeTab === 'openai'
+                                ? 'bg-base-content text-base-100 border-base-content'
+                                : 'text-base-content/60 border-transparent hover:text-base-content hover:border-lime-signal'
+                                }`}
+                            onClick={() => startTransition(() => setActiveTab('openai'))}
+                        >
+                            {t('settings.tabs.openai', 'OpenAI Models')}
                         </button>
                         <button
                             className={`px-5 py-2.5 rounded-none text-xs font-black uppercase tracking-[0.18em] transition-colors border-b-4 -mb-1 ${activeTab === 'advanced'
@@ -1023,6 +1033,25 @@ function Settings() {
                                     {t('settings.tabs.oauth', 'OAuth')}
                                 </button>
                             </div>
+
+                            {/* OpenAI Upstream 导航卡片 */}
+                            <div className="mt-4 pt-4 border-t border-base-content/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-base-content/[0.03] border border-base-content/20">
+                                <div>
+                                    <div className="text-sm font-black uppercase tracking-wide text-base-content">
+                                        {t('settings.openai.title', 'OpenAI-Compatible Models & Endpoints')}
+                                    </div>
+                                    <p className="text-xs text-base-content/60 mt-0.5">
+                                        {t('settings.openai.desc', 'Bridge NVIDIA NIM, Groq, OpenRouter, DeepSeek, or local Ollama into Google Antigravity.')}
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => startTransition(() => setActiveTab('openai'))}
+                                    className="px-4 py-2 text-xs font-black uppercase tracking-wider bg-base-content text-base-100 hover:opacity-90 shrink-0 self-start sm:self-auto"
+                                >
+                                    {t('settings.tabs.openai', 'OpenAI Models')}
+                                </button>
+                            </div>
                         </div>
                     )}
 
@@ -1034,6 +1063,28 @@ function Settings() {
                                 const newFormData = {
                                     ...formData,
                                     oauth: newOAuthConfig,
+                                };
+                                setFormData(newFormData);
+                                try {
+                                    await saveConfig(newFormData);
+                                } catch (error) {
+                                    showToast(`${t('common.error')}: ${error}`, 'error');
+                                }
+                            }}
+                        />
+                    )}
+
+                    {/* OpenAI 模型与上游设置 */}
+                    {activeTab === 'openai' && (
+                        <OpenAiUpstreamSettings
+                            config={formData.proxy?.openai}
+                            onChange={async (newOpenAiConfig) => {
+                                const newFormData = {
+                                    ...formData,
+                                    proxy: {
+                                        ...formData.proxy,
+                                        openai: newOpenAiConfig,
+                                    },
                                 };
                                 setFormData(newFormData);
                                 try {

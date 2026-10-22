@@ -806,6 +806,7 @@ pub fn run() {
             commands::proxy::set_preferred_account,
             commands::proxy::get_preferred_account,
             commands::proxy::fetch_vertex_models,
+            commands::proxy::test_openai_upstream_route,
             commands::proxy::clear_proxy_rate_limit,
             commands::proxy::clear_all_proxy_rate_limits,
             // Proxy Pool Binding commands

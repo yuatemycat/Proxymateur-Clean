@@ -34,6 +34,24 @@ export interface ProxyConfig {
     multimodal?: MultimodalConfig;
     vertex?: VertexConfig;
     gateway_routing_mode?: 'all' | 'argon_only';
+    openai?: OpenAiUpstreamConfig;
+}
+
+export interface OpenAiRoute {
+    model_id: string;
+    upstream_model?: string;
+    base_url?: string;
+    api_key?: string;
+    timeout_secs?: number;
+}
+
+export interface OpenAiUpstreamConfig {
+    enabled: boolean;
+    default_base_url: string;
+    default_api_key: string;
+    default_timeout_secs: number;
+    routes: OpenAiRoute[];
+    auto_route_prefix?: string;
 }
 
 /** Vertex AI 直连上游：命中映射的模型走用户自己的 GCP 项目 */
