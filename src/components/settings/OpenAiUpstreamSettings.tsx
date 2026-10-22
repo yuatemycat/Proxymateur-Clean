@@ -25,17 +25,12 @@ interface OpenAiUpstreamSettingsProps {
 }
 
 export const DEFAULT_OPENAI_CONFIG: OpenAiUpstreamConfig = {
-    enabled: true,
-    default_base_url: 'https://integrate.api.nvidia.com/v1',
+    enabled: false,
+    default_base_url: '',
     default_api_key: '',
     default_timeout_secs: 120,
     auto_route_prefix: 'openai/',
-    routes: [
-        {
-            model_id: 'deepseek-ai/deepseek-v4.1-flash',
-            upstream_model: 'deepseek-ai/deepseek-v4.1-flash'
-        }
-    ]
+    routes: []
 };
 
 interface ProbeResult {
@@ -105,7 +100,7 @@ export default function OpenAiUpstreamSettings({
     // Defensive normalization against legacy config schemas or undefined properties
     const safeConfig: OpenAiUpstreamConfig = {
         enabled: config?.enabled ?? DEFAULT_OPENAI_CONFIG.enabled,
-        default_base_url: config?.default_base_url || (config as any)?.base_url || DEFAULT_OPENAI_CONFIG.default_base_url,
+        default_base_url: config?.default_base_url || (config as any)?.base_url || '',
         default_api_key: config?.default_api_key || (config as any)?.api_key || '',
         default_timeout_secs: config?.default_timeout_secs ?? 120,
         auto_route_prefix: config?.auto_route_prefix ?? 'openai/',
@@ -116,7 +111,7 @@ export default function OpenAiUpstreamSettings({
                     model_id: m,
                     upstream_model: (config as any)?.model_mapping?.[m] || m
                 }))
-                : DEFAULT_OPENAI_CONFIG.routes
+                : []
     };
 
     const [showDefaultKey, setShowDefaultKey] = useState(false);
@@ -328,7 +323,7 @@ export default function OpenAiUpstreamSettings({
                         <input
                             type="text"
                             className="input input-sm w-full rounded-none border border-base-content/40 bg-base-200 text-base-content font-mono text-xs focus:outline-none focus:border-base-content"
-                            placeholder="https://integrate.api.nvidia.com/v1"
+                            placeholder="https://api.openai.com/v1"
                             value={safeConfig.default_base_url}
                             onChange={(e) => updateConfig({ default_base_url: e.target.value })}
                         />
@@ -607,7 +602,7 @@ export default function OpenAiUpstreamSettings({
                             <input
                                 type="text"
                                 className="input input-sm w-full rounded-none border border-base-content/40 bg-base-200 text-base-content font-mono text-xs focus:outline-none focus:border-base-content"
-                                placeholder={safeConfig.default_base_url || 'https://integrate.api.nvidia.com/v1'}
+                                placeholder={safeConfig.default_base_url || 'https://api.openai.com/v1'}
                                 value={formBaseUrl}
                                 onChange={(e) => setFormBaseUrl(e.target.value)}
                             />

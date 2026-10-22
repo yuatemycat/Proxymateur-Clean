@@ -36,20 +36,11 @@ pub struct OpenAiUpstreamConfig {
 impl Default for OpenAiUpstreamConfig {
     fn default() -> Self {
         Self {
-            enabled: true,
-            base_url: "https://integrate.api.nvidia.com/v1".to_string(),
+            enabled: false,
+            base_url: String::new(),
             api_key: String::new(),
-            exposed_models: vec![
-                "deepseek-ai/deepseek-v4.1-flash".to_string(),
-                "deepseek-chat".to_string(),
-                "deepseek-reasoner".to_string(),
-            ],
-            model_mapping: {
-                let mut map = HashMap::new();
-                map.insert("deepseek-flash".to_string(), "deepseek-ai/deepseek-v4.1-flash".to_string());
-                map.insert("deepseek-v4.1-flash".to_string(), "deepseek-ai/deepseek-v4.1-flash".to_string());
-                map
-            },
+            exposed_models: Vec::new(),
+            model_mapping: HashMap::new(),
         }
     }
 }
@@ -153,8 +144,8 @@ pub fn resolve_route(config: &OpenAiUpstreamConfig, client_model: &str) -> Optio
         .max_by_key(|(len, _)| *len)
         .map(|(_, val)| val);
 
-    // 4. Auto-detect deepseek or openai model names
-    let auto_detect = if requested.starts_with("deepseek") || requested.starts_with("openai/") {
+    // 4. Auto-detect models with explicit openai/ prefix
+    let auto_detect = if requested.starts_with("openai/") {
         Some(client_model.trim().trim_start_matches("models/").to_string())
     } else {
         None
@@ -168,16 +159,14 @@ pub fn resolve_route(config: &OpenAiUpstreamConfig, client_model: &str) -> Optio
     // Resolve API key
     let mut api_key = config.api_key.trim().to_string();
     if api_key.is_empty() {
-        if let Ok(env_key) = std::env::var("NVIDIA_API_KEY") {
-            api_key = env_key.trim().to_string();
-        } else if let Ok(env_key) = std::env::var("OPENAI_API_KEY") {
+        if let Ok(env_key) = std::env::var("OPENAI_API_KEY") {
             api_key = env_key.trim().to_string();
         }
     }
 
-    let mut base_url = config.base_url.trim().trim_end_matches('/').to_string();
+    let base_url = config.base_url.trim().trim_end_matches('/').to_string();
     if base_url.is_empty() {
-        base_url = "https://integrate.api.nvidia.com/v1".to_string();
+        return None;
     }
 
     Some(OpenAiRoute {

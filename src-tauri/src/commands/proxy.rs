@@ -874,6 +874,13 @@ pub async fn test_openai_upstream_route(
         .map_err(|e| format!("Failed to create HTTP client: {e}"))?;
 
     let trimmed_base = base_url.trim().trim_end_matches('/');
+    if trimmed_base.is_empty() {
+        return Ok(OpenAiProbeResult {
+            ok: false,
+            latency_ms: 0,
+            message: "Base URL is required".to_string(),
+        });
+    }
     let url = if trimmed_base.ends_with("/chat/completions") {
         trimmed_base.to_string()
     } else {
@@ -890,7 +897,21 @@ pub async fn test_openai_upstream_route(
     });
 
     let mut req = client.post(&url).json(&body);
-    let key = api_key.trim();
+    let mut key = api_key.trim().to_string();
+    let mut auth_source = String::new();
+    if key.is_empty() {
+        if let Ok(env_key) = std::env::var("NVIDIA_API_KEY") {
+            if !env_key.trim().is_empty() {
+                key = env_key.trim().to_string();
+                auth_source = " (using env NVIDIA_API_KEY)".to_string();
+            }
+        } else if let Ok(env_key) = std::env::var("OPENAI_API_KEY") {
+            if !env_key.trim().is_empty() {
+                key = env_key.trim().to_string();
+                auth_source = " (using env OPENAI_API_KEY)".to_string();
+            }
+        }
+    }
     if !key.is_empty() {
         req = req.header("Authorization", format!("Bearer {}", key));
     }
@@ -903,7 +924,7 @@ pub async fn test_openai_upstream_route(
                 Ok(OpenAiProbeResult {
                     ok: true,
                     latency_ms,
-                    message: format!("HTTP {} OK", status.as_u16()),
+                    message: format!("HTTP {} OK{}", status.as_u16(), auth_source),
                 })
             } else {
                 let err_text = resp.text().await.unwrap_or_default();
@@ -912,10 +933,15 @@ pub async fn test_openai_upstream_route(
                 } else {
                     err_text
                 };
+                let msg = if status == reqwest::StatusCode::UNAUTHORIZED && key.is_empty() {
+                    "HTTP 401: Authorization header missing. Please provide an API key in Default API Key or set NVIDIA_API_KEY / OPENAI_API_KEY in environment.".to_string()
+                } else {
+                    format!("HTTP {}: {}", status.as_u16(), short_err)
+                };
                 Ok(OpenAiProbeResult {
                     ok: false,
                     latency_ms,
-                    message: format!("HTTP {}: {}", status.as_u16(), short_err),
+                    message: msg,
                 })
             }
         }
