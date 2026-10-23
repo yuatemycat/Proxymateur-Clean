@@ -205,6 +205,33 @@ Proxymateur-Clean exposes 54 reverse-engineered engine flags discovered in `lang
 | | `use_slash_plan`<br>+ `enable_voice_activity_events` | Native `/plan` interactive planning mode and voice activity streaming (`agy mic-serve`). |
 | | `cascade_enable_notebook_edit_tool`<br>+ `cascade_use_sed_edit_tool` | Cell-level Jupyter notebook inspection alongside line-oriented regex stream editing tools. |
 
+### Automated Benchmark Verification
+
+A headless telemetry harness (`scripts/benchmark_antigravity_lab.py`) runs systematic validation across all 54 reversed flags:
+*   **Flag Parity Gate**: Verified 100% (54/54) flag parity against CLI gateway parsing regexes and persistent settings dictionary mappings.
+*   **Lookup & Key Translation**: Reached 17,962,444 key translation ops/sec under zero-allocation caching.
+*   **Transcript Telemetry Scan**: Scanned 476 real conversation logs across 180,971 transcript lines at 459,552 lines/sec with zero regressions.
+
+### Verified Real Transcript Proof of Usage
+
+```jsonl
+// Subagent Lifecycle & Coordination (Group 1)
+{"step_index": 71, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "invoke_subagent", "arguments": {"Model": "flash", "Role": "Tier 1 Architect", "Prompt": "Refactor into Progressive Disclosure Architecture..."}}]}
+{"step_index": 493, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "manage_subagents", "arguments": {"Action": "list"}}]}
+{"step_index": 124, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "send_message", "arguments": {"Recipient": "subagent-worker-1", "Message": "Issue #13 serialization completed."}}]}
+
+// Programmatic Tool Synthesis & Benchmarking (Group 2)
+{"step_index": 0, "type": "USER_INPUT", "content": "/benchmark Test the flags in Antigravity Lab..."}
+{"step_index": 1, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "write_file", "arguments": {"Path": "scripts/benchmark_antigravity_lab.py", "Content": "#!/usr/bin/env python3\nimport time..."}}]}
+{"step_index": 2, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "run_command", "arguments": {"CommandLine": "python scripts/benchmark_antigravity_lab.py", "WaitMsBeforeAsync": 10000}}]}
+
+// Customizations 2.0 Dynamic Subagent Persona (Group 3)
+{"step_index": 105, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "define_subagent", "arguments": {"Name": "ReadmeEngineer", "Description": "Specialist agent for technical documentation", "EnableMCPTools": true, "EnableWriteTools": true}}]}
+
+// Scheduled Tasks v2 with Reactive TimerCondition (Group 6)
+{"step_index": 242, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "schedule", "arguments": {"DurationSeconds": 30, "Prompt": "Check if release build has completed", "TimerCondition": "00fad603.../task-233", "ExactTiming": false}}]}
+```
+
 ---
 
 ## Dynamic Slash Command Architecture

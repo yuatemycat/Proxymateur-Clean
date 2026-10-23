@@ -49,7 +49,7 @@ function Sync-CliExperimentFlags {
 
     Strip-FileBom $settingsPath
 
-    $expFlags = @($PassedArgs | Where-Object { $_ -match '^--(enable|disable|jetski|cascade)-[a-z0-9-]+(=(true|false))?$' })
+    $expFlags = @($PassedArgs | Where-Object { $_ -match '^--(enable|disable|jetski|cascade|cortex|sidecar|use|scheduled|show|deprecate|allow|send)-[a-z0-9-]+(=(true|false))?$' })
     if ($expFlags.Count -eq 0) { return $PassedArgs }
 
     try {
