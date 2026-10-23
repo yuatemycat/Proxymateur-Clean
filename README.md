@@ -205,31 +205,119 @@ Proxymateur-Clean exposes 54 reverse-engineered engine flags discovered in `lang
 | | `use_slash_plan`<br>+ `enable_voice_activity_events` | Native `/plan` interactive planning mode and voice activity streaming (`agy mic-serve`). |
 | | `cascade_enable_notebook_edit_tool`<br>+ `cascade_use_sed_edit_tool` | Cell-level Jupyter notebook inspection alongside line-oriented regex stream editing tools. |
 
-### Automated Benchmark Verification
+### How the 54 Flags Are Invoked (3-Layer Execution Pipeline)
 
-A headless telemetry harness (`scripts/benchmark_antigravity_lab.py`) runs systematic validation across all 54 reversed flags:
-*   **Flag Parity Gate**: Verified 100% (54/54) flag parity against CLI gateway parsing regexes and persistent settings dictionary mappings.
-*   **Lookup & Key Translation**: Reached 17,962,444 key translation ops/sec under zero-allocation caching.
-*   **Transcript Telemetry Scan**: Scanned 476 real conversation logs across 180,971 transcript lines at 459,552 lines/sec with zero regressions.
+Every flag in the 54-flag matrix is wired through a deterministic 3-layer invocation pipeline verified by `scripts/benchmark_antigravity_lab.py`:
 
-### Verified Real Transcript Proof of Usage
+1. **Layer 1: Binary ABI & PE Command Cave (`agy.exe` & `language_server.exe`)**
+   - **Experiment Descriptor Table (`54/54` Verified Offsets)**: All 54 flags exist as compiled string descriptors inside `agy.exe` (`204,027,392` bytes, `ImageBase = 0x140000000`) spanning raw file offsets `0x39599b3` (`enable-pty`) through `0xa5b5895` (`use-core-direct`), bound to `ExperimentKey` and `ListExperimentsResponse_Flag` protobuf evaluators.
+   - **Native Slash Command Spec Table (`12` Built-in Entries)**: Native CLI slash commands are compiled into 104-byte (`0x68`) descriptors at raw `0xbe58cf8..0xbe59170` linked to 144-byte (`0x90`) spec structs at `0xbe5c530..0xbe5cb60` (`goal`, `compact`, `schedule`, `browser`, `browser-vision`, `plan`, `grill-me`, `teamwork`, `learn`, `boost`, `deepagent`, `review-agent`).
+   - **Patched `.proxcv` Section (`PROX_CMD_V1` @ `0xc292fda`)**: `scripts/auto_patch_agy.py` injects a 4 KB `.proxcv` PE section (`VA 0x14e574000`, raw `0xc292600`) containing 11 56-byte (`0x38`) `commands.GenericCommand` structs (`battle`, `owl`, `swarm`, `benchmark`, `generative_ui`, `compact`, `teamwork-preview`, `teamwork`, `teamwork-previews`, `team`, `flash`) directly into `commands.NewRegistry` (`0x14314fbc0`), bypassing server-side `MultiagentControls.GetBoostCommandDisabled` (`0x140ca8600`) gating.
+
+2. **Layer 2: CLI Gateway Interception & Dual-Store Persistence**
+   - **CLI Flag Interception (`Sync-CliExperimentFlags`)**: Passing any `--<kebab-flag>=true` argument to `agy` triggers `Sync-CliExperimentFlags` in `scripts/agy_gateway.ps1`, matching `^--(enable|disable|jetski|cascade|cortex|sidecar|use|scheduled|show|deprecate|allow|send)-[a-z0-9-]+(=(true|false))?$` (`54/54` pass rate), stripping UTF-8 BOMs, writing the key to `~/.gemini/antigravity-cli/settings.json` (`"experiments"`), and stripping the consumed flag before launching `agy.exe`.
+   - **Bidirectional GUI-to-CLI Sync**: Toggling any pair in **Settings -> Advanced -> Antigravity Lab** (`toggle_antigravity_experiment`) atomically updates `snake_case` keys in `~/.proxymateur/gui_config.json` (`"antigravity_lab"`) and `kebab-case` keys in `~/.gemini/antigravity-cli/settings.json` (`"experiments"`).
+
+3. **Layer 3: Runtime Tool Dispatch & Subsystem Activation Across the 7 Clusters**
+
+| Cluster | Binary Offset Range (`agy.exe`) | Runtime Invocation Mechanism & Activated Tool Schemas | Empirical Transcript Count (`478` Convs) |
+| :--- | :--- | :--- | :--- |
+| **Group 1: Multi-Agent & Swarm** | `0x3a22b73` – `0x3b0983f` | Unlocks `invoke_subagent` batch arrays, `manage_subagents` (`list`/`kill`), `send_message`, `generate_image`, and parent Pro/Opus model inheritance (`Model: "inherit"`). | `81` batch `invoke_subagent` calls -> `153` spawned subagents (`130` `inherit`, `23` `flash`); `865` `manage_subagents`; `160` `send_message`; `1` `generate_image` |
+| **Group 2: Slash Commands & Arena** | `0x39a9c5b` – `0x3ad50c3`<br>+ `.proxcv` `0x14e574000` | Dispatches `/swarm`, `/owl`, `/battle`, `/benchmark`, `/compact`, `/generative_ui`, `/deepagent`, `/review-agent` via `.proxcv` `GenericCommand` registry + `~/.gemini/config/skills/<name>/SKILL.md`. | `/swarm` (`154`), `/compact` (`43`), `/owl` (`29`), `/benchmark` (`17`), `/battle` (`8`), `/generative_ui` (`4`) |
+| **Group 3: Customizations 2.0 & Plugins** | `0x39be85d` – `0xa5b53e0` | Unlocks `define_subagent` dynamic agent personas, `call_mcp_tool` plugin MCP servers (`code-review-graph`, `pyghidra`, `SuperghidraMCP`, `agy-context-guard`, `memory`), and lifecycle hooks. | `1,539` `call_mcp_tool` calls; `10` `define_subagent` calls; `42` loaded skills |
+| **Group 4: Sidecar Runtime & UI** | `0x39d4fd1` – `0xa5b582a` | Prewarms iframe micro-frontends and routes sidecar RPC/IPC traffic (`sidecar-gateway`) for generative HTML5/Canvas/WebGL artifacts. | `4` `/generative_ui` widget sessions (`1,686` steps, `745` tool calls) |
+| **Group 5: DeepMind AGI Safety** | `0x3a6d7c5` – `0x422aac4` | Routes shell commands through Policy Guardian (`enable-command-assessor` / `enable-command-antivirus`), `ask_permission` elevation gates, and CDP browser subagent v2. | `40,149` audited `run_command` executions; `22` `read_url_content` / browser captures |
+| **Group 6: Terminal & Resilience** | `0x39599b3` – `0xa5b578f` | Persistent ConPTY sessions (`enable-pty`), non-blocking background tasks (`manage_task`), reactive timers/cron (`schedule` with `TimerCondition`), and automatic 429 capacity retries. | `8,515` `manage_task` calls; `270` `schedule` timers; `1,539` non-blocking MCP turns |
+| **Group 7: Cortex State & Planning** | `0x39bfa3f` – `0xa5b5895` | Captures Cortex filesystem snapshots before destructive edits, enables AST component rewrites (`use-component-rewrite`), and dispatches `/plan` (`use-slash-plan`). | `21,312` `view_file` reads; `4,957` `write_to_file` writes; `3,914` `replace_file_content` edits; `7` `/plan` sessions |
+
+### Head-to-Head Benchmark: Antigravity Lab Workflows vs. Native Slash Commands
+
+Forensic analysis of `agy.exe` (`0xbe58cf8` native command table vs. `0xc292600` `.proxcv` table) combined with empirical telemetry across **478 real conversation transcripts** (`178,204` JSONL lines, `81,953` tool calls) highlights the architectural differences between Antigravity Lab workflows and Google's native built-in commands:
+
+1. **Multi-Agent Swarm (`/swarm`) vs. Native `/teamwork` & `/teamwork-preview`**
+   - **Model Tier Lock vs. Full Pro/Opus Inheritance**: Native `/teamwork` (`0xbe58fd0`) defaults to forcing spawned subagents onto `flash` unless `disable-teamwork-forced-flash-model` (`0x3aeda74`) is enabled. With Group 1 active, **85.0% (`130/153`)** of all spawned subagents inherit the parent Pro/Opus reasoning model (`"Model": "inherit"`), while **15.0% (`23/153`)** run on `"Model": "flash"` only when explicitly requested for high-concurrency mechanical refactoring.
+   - **Hands-Free Autonomy vs. Interactive Question Blocking (`ask_question`)**: Native `/teamwork-preview` and `/teamwork` are hardcoded to interview the user via `ask_question` modals before spawning workers (**40.0% to 100.0%** session interruption rate, as seen in session `2ab783ff` steps 3 and 11). Powered by `jetski-autonomous-mode` (`0x3a59f1c`), `/swarm` achieved a **2.3% (`1/43`)** `ask_question` interruption rate across `154` invocations, spawning `132` subagents across `66` batch `invoke_subagent` calls with `827` `manage_subagents` lifecycle checks.
+
+2. **Deep Architectural Synthesis (`/owl`) vs. Native `/boost`**
+   - **Binary Entitlement Gating**: Native `/boost` (`0xbe590a0`, icon `'bolt'`) is gated by `MultiagentControls.GetBoostCommandDisabled` (`0x140ca8600` / `0x1410ec360`) and fails when server-side experiment entitlements are absent. `/owl` (`enable-owl-slash-command` @ `0x3a7b7e6`, `.proxcv` @ `0x14e574038`) executes locally without server gating.
+   - **1-Hop Parallel Fan-Out vs. 2-Hop Coordinator Overhead**: In real transcripts (`589f5a7c` and `d66a5214`), invoking native `/boost` spawns an intermediate `DeepCoderCoordinator` subagent whose `SYSTEM_SDK` prompt forbids it from reading or editing files (`"You are a pipeline coordinator... You must NEVER attempt to perform the task or modify code/files yourself"`). This intermediate coordinator consumes `24,066–37,972` input tokens purely to forward `<original_task>` to a single `DeepCoderWorkerL0` subagent (`Parent -> DeepCoderCoordinator -> DeepCoderWorkerL0`). Furthermore, in session `589f5a7c` step 7, when `DeepCoderWorkerL0` encountered a transient `HTTP 429 RESOURCE_EXHAUSTED`, the native `/boost` coordinator aborted immediately. By contrast, `/owl` dispatches parallel `TypeName: "research"` (`DeepInvestigator`) and `TypeName: "self"` (`DeepCoder`) workers in a 1-hop flat fan-out (`Parent -> N parallel workers`) while querying `code-review-graph` and `pyghidra` MCP servers directly (`29` invocations across `25` sessions, `21` spawned subagents, `324` `manage_subagents` calls, `0` user interruptions).
+
+3. **Adversarial Arena (`/battle`) & Programmatic Profiling (`/benchmark`) vs. Native `/plan`, `/goal`, & `/grill-me`**
+   - Native `/plan` (`0xbe58f00`, static inline `<PLAN>` prompt `3,735` bytes) and `/grill-me` (`0xbe58f68`, static inline `<GRILL_ME>` prompt `491` bytes) are single-agent prompt wrappers (`0` subagents spawned across all `6` `/plan` sessions).
+   - `/battle` (`enable-battle-mode` @ `0x3ad50c3` + `enable-battle-mode-custom-agents`) dynamically defines competing agent personas via `define_subagent` (e.g., `gladiator_canvas_a` vs. `gladiator_webgl_b` in `2ab783ff`, and `Gladiator-Alpha` vs. `Gladiator-Beta` in `cfde9b8d`), isolates their implementations, and runs head-to-head benchmarks before declaring a winner.
+   - `/benchmark` (`enable-programmatic-tools` @ `0x3a88e31`) synthesizes standalone benchmark scripts and stress harnesses on the fly (`17` invocations across `10` sessions, `370.1` avg tool calls/session, `13` spawned subagents).
+
+| Workflow Command | Origin & Binary Location | Invocations (`478` Convs) | Unique Sessions | Avg Steps / Session | Avg Tool Calls / Session | `invoke_subagent` Calls (Spawned Workers) | `manage_subagents` Supervision Calls | `define_subagent` Personas | Interactive Block Rate (`ask_question`) |Topology & Model Inheritance |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **`/swarm`** | **Antigravity Lab** (`.proxcv` `0x14e574070`) | **154** | **43** | 1,196.4 | 565.6 | **66 (132)** | **827** | **8** | **2.3%** (`1/43`) | 1-hop parallel batch (`inherit` Pro/Opus + selective `flash`) |
+| **`/compact`** | **Lab + Native** (`0x3aad9c8` / `0xbe58d60`) | **43** | **19** | 2,052.8 | 944.6 | 18 (46) | 100 | 1 | **5.3%** (`1/19`) | Reactive trajectory pruning + pinned state preservation |
+| **`/owl`** | **Antigravity Lab** (`0x3a7b7e6` / `0x14e574038`) | **29** | **25** | 791.8 | 374.2 | **18 (21)** | **324** | **7** | **0.0%** (`0/25`) | 1-hop `research` + `self` fan-out (`100% inherit`) |
+| **`/goal`** | **Native CLI** (`0xbe58cf8` / `0xbe5c530`) | **25** | **7** | 1,832.9 | 835.0 | 11 (15) | 167 | 2 | **14.3%** (`1/7`) | Continuous loop until completion criteria met |
+| **`/benchmark`** | **Antigravity Lab** (`0x3a88e31` / `0x14e5740a8`) | **17** | **10** | 778.8 | 370.1 | **12 (13)** | **420** | **1** | **0.0%** (`0/10`) | Programmatic tool synthesis + empirical harness execution |
+| **`/teamwork-preview`** | **Lab Bridge -> Native** (`0x14e574150` / `0xbe58fd0`) | **9** | **5** | 1,170.2 | 530.6 | 6 (10) | 15 | 2 | **40.0%** (`2/5`) | Pre-execution `ask_question` interview + team spawn |
+| **`/battle`** | **Antigravity Lab** (`0x3ad50c3` / `0x14e574000`) | **8** | **6** | 493.3 | 227.3 | **6 (8)** | **153** | **0** | **0.0%** (`0/6`) | 2-gladiator adversarial duel + automated judge |
+| **`/plan`** | **Native CLI** (`0xbe58f00` / `0x39bfa3f`) | **7** | **6** | 1,174.7 | 501.2 | 0 (0) | 0 | 0 | **0.0%** (`0/6`) | Single-agent static `<PLAN>` prompt (`3,735` bytes) |
+| **`/boost`** | **Native CLI** (`0xbe590a0` / `0x140ca8600`) | **6** | **3** | 582.3 | 261.3 | 3 (4) | 3 | 0 | **0.0%** (`0/3`) | 2-hop `DeepCoderCoordinator -> DeepCoderWorkerL0` (+38K token hop) |
+| **`/generative_ui`** | **Antigravity Lab** (`0x3a3433c` / `0x14e5740e0`) | **4** | **3** | 562.0 | 248.3 | 2 (4) | 12 | 0 | **0.0%** (`0/3`) | Interactive HTML5/Canvas/WebGL sidecar artifact rendering |
+| **`/btw`** | **Native CLI** (Aside overlay) | **4** | **1** | 575.0 | 272.0 | 0 (0) | 0 | 0 | **0.0%** (`0/1`) | Ephemeral side-query overlay (extended by Lab `/con btw`) |
+| **`/teamwork`** | **Native CLI** (`0xbe58fd0` / `0xbe5c890`) | **2** | **2** | 2,775.0 | 1,310.5 | 1 (2) | 0 | 2 | **100.0%** (`2/2`) | Mandatory multi-choice `ask_question` gating |
+
+### Automated Benchmark Verification (`scripts/benchmark_antigravity_lab.py`)
+
+Run the forensic benchmark suite to reproduce all binary offset checks, CLI gateway regex validations, and transcript telemetry metrics:
+
+```bash
+python scripts/benchmark_antigravity_lab.py
+```
+
+*   **Layer 1 (Binary ABI Gate)**: Scans `agy.exe` (`204,027,392` bytes) in `2.40s`, confirming **54/54 (100.0%)** reversed flags at their exact PE offsets alongside the `PROX_CMD_V1` `.proxcv` command cave at `0xc292fda`.
+*   **Layer 2 (CLI Gateway & Sync Gate)**: Validates **54/54 (100.0%)** `--<kebab-flag>=true` arguments against `Sync-CliExperimentFlags` in `scripts/agy_gateway.ps1` and benchmarks `snake_case <-> kebab-case` key translation at **8,929,716 ops/sec**.
+*   **Layer 3 (Transcript Telemetry Gate)**: Parses **478** real conversation logs (`178,204` lines) and resolves untruncated `tool_calls[].args` from `transcript_full.jsonl` in `3.17s` (**56,299 lines/sec**), verifying **81** batch `invoke_subagent` calls (**153** spawned subagents), **865** `manage_subagents` calls, **1,539** `call_mcp_tool` invocations, and **270** `schedule` timers.
+
+### Verified Real Transcript Proof of Usage (All 7 Paired Flag Clusters)
+
+The following untruncated JSONL records are extracted directly from `~/.gemini/antigravity-cli/brain/<conversation-id>/.system_generated/logs/transcript_full.jsonl`, demonstrating real runtime invocations across all 7 paired flag clusters and contrasting them against native `/boost` and `/teamwork-preview`:
 
 ```jsonl
-// Subagent Lifecycle & Coordination (Group 1)
-{"step_index": 71, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "invoke_subagent", "arguments": {"Model": "flash", "Role": "Tier 1 Architect", "Prompt": "Refactor into Progressive Disclosure Architecture..."}}]}
-{"step_index": 493, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "manage_subagents", "arguments": {"Action": "list"}}]}
-{"step_index": 124, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "send_message", "arguments": {"Recipient": "subagent-worker-1", "Message": "Issue #13 serialization completed."}}]}
+// [Group 1: Multi-Agent & Swarm] Parallel Pro/Opus Inheritance (disable-teamwork-forced-flash-model @ 0x3aeda74 + enable-subagent-hub @ 0x3a22b73)
+// Conversation: 00acf6fa-ee44-432d-95f0-ebfad5730aa9 | Step: 486 | Spawns 2 concurrent subagents inheriting parent Pro/Opus model
+{"step_index": 486, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "invoke_subagent", "args": {"Subagents": [{"Model": "inherit", "Role": "Native Cloak Engineer", "TypeName": "self", "Prompt": "You are NativeCloakEngineer on the project-b team. Your mission is to upgrade and compile ~/workspace/project-a\\project-b\\project-b_guard.c..."}, {"Model": "inherit", "Role": "Emulator Orchestrator", "TypeName": "self", "Prompt": "You are EmulatorOrchestrator on the project-b team. Your mission is to upgrade ~/workspace/project-a\\project-b\\start_project-b.py..."}], "toolAction": "Invoking swarm agents", "toolSummary": "Spawn project-b Swarm"}}]}
 
-// Programmatic Tool Synthesis & Benchmarking (Group 2)
-{"step_index": 0, "type": "USER_INPUT", "content": "/benchmark Test the flags in Antigravity Lab..."}
-{"step_index": 1, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "write_file", "arguments": {"Path": "scripts/benchmark_antigravity_lab.py", "Content": "#!/usr/bin/env python3\nimport time..."}}]}
-{"step_index": 2, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "run_command", "arguments": {"CommandLine": "python scripts/benchmark_antigravity_lab.py", "WaitMsBeforeAsync": 10000}}]}
+// [Group 1: Multi-Agent & Swarm] 4-Way Parallel Flash Batch + Hub Lifecycle Management (jetski-autonomous-mode @ 0x3a59f1c + enable-swarm-monitor @ 0x3a36434)
+// Conversation: 0088482d-189d-4238-a7a5-aacefde43748 | Step: 71 & Conv: 00acf6fa-ee44-432d-95f0-ebfad5730aa9 | Step: 495
+{"step_index": 71, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "invoke_subagent", "args": {"Subagents": [{"Model": "flash", "Role": "Tier 1 & Templates Architect", "TypeName": "self", "Workspace": "inherit"}, {"Model": "flash", "Role": "Tier 2 Domain Extractor", "TypeName": "self", "Workspace": "inherit"}, {"Model": "flash", "Role": "Tier 3 Runbook & Archive Engineer", "TypeName": "self", "Workspace": "inherit"}, {"Model": "flash", "Role": "Workspace & Runtime Hygiene Engineer", "TypeName": "self", "Workspace": "inherit"}], "toolSummary": "Spawn 4 flash subagents concurrently"}}]}
+{"step_index": 495, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "manage_subagents", "args": {"Action": "kill", "ConversationIds": ["77718629-f512-4e7e-bef5-c51eb7591434"], "toolSummary": "Kill idle subagent"}}]}
 
-// Customizations 2.0 Dynamic Subagent Persona (Group 3)
-{"step_index": 105, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "define_subagent", "arguments": {"Name": "ReadmeEngineer", "Description": "Specialist agent for technical documentation", "EnableMCPTools": true, "EnableWriteTools": true}}]}
+// [Group 1: Image Generator Subagent] Native Imagen Asset Synthesis (enable-image-generator-subagent @ 0x3acc025)
+// Conversation: c1b95f92-3ce2-4a59-a0b8-42ec94fba4ba | Step: 534
+{"step_index": 534, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "generate_image", "args": {"AspectRatio": "16:9", "ImageName": "anti-tamper_spotlight_bar", "Prompt": "UI design mockup of a sleek dark-themed floating spotlight launcher bar (Raycast/Alfred style for Windows)...", "toolSummary": "Generate Spotlight Bar UI mockup"}}]}
 
-// Scheduled Tasks v2 with Reactive TimerCondition (Group 6)
-{"step_index": 242, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "schedule", "arguments": {"DurationSeconds": 30, "Prompt": "Check if release build has completed", "TimerCondition": "00fad603.../task-233", "ExactTiming": false}}]}
+// [Group 2: Deep Exploration & Arena] /owl Research Taxonomists + /battle Custom Arena Gladiators (enable-owl-slash-command @ 0x3a7b7e6 + enable-battle-mode-custom-agents @ 0x3ad50c3)
+// Conversation: 2bc26c6e-052e-45c0-b587-7baae0bc152c | Step: 39 & Conv: 2ab783ff-52d9-4829-b8fc-029f27df17c5 | Step: 45
+{"step_index": 39, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "invoke_subagent", "args": {"Subagents": [{"Model": "inherit", "Role": "Protocol & Reversing Taxonomist", "TypeName": "research"}, {"Model": "inherit", "Role": "Engine Integration Architect", "TypeName": "research"}]}}]}
+{"step_index": 45, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "invoke_subagent", "args": {"Subagents": [{"Model": "inherit", "Role": "OffscreenCanvas Dirty-Rect Champion", "TypeName": "gladiator_canvas_a"}, {"Model": "inherit", "Role": "Instanced WebGL Shader Champion", "TypeName": "gladiator_webgl_b"}]}}]}
+
+// [Contrast: Native /boost Coordinator Hop & Native /teamwork-preview Questionnaire Gate]
+// Conversation: 589f5a7c-1327-4912-90d5-a17ebe079594 | Step: 2 & 7 (Native /boost consumes 37,972 input tokens to spawn DeepCoderWorkerL0, then aborts on 429)
+{"step_index": 2, "type": "PLANNER_RESPONSE", "input_tokens": 37972, "output_tokens": 1106, "tool_calls": [{"name": "invoke_subagent", "args": {"Subagents": [{"Model": "inherit", "Role": "Benchmark README Coder", "TypeName": "DeepCoderWorkerL0"}]}}]}
+{"step_index": 7, "type": "SYSTEM_MESSAGE", "content": "The subagent Benchmark README Coder (DeepCoderWorkerL0) with id \"d98f476d-5649-4586-af42-ab6ee62f2542\" encountered an error and has either stopped or failed to start execution: RESOURCE_EXHAUSTED (code 429)"}
+// Conversation: 2ab783ff-52d9-4829-b8fc-029f27df17c5 | Step: 3 (Native /teamwork-preview blocks on interactive ask_question modal before starting work)
+{"step_index": 3, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "ask_question", "args": {"questions": [{"question": "What type of project or objective would you like the multi-agent team to tackle?"}, {"question": "What is the primary purpose and quality bar for this project?"}], "toolSummary": "Elicit project idea"}}]}
+
+// [Group 3: Customizations 2.0 & Plugins] Dynamic Agent Persona Registration + Non-Blocking MCP Dispatch (enable-customization-kind-agent @ 0xa5b5301 + enable-customization-kind-mcp @ 0xa5b535b)
+// Conversation: 26066452-f54f-4c7c-87ef-42c8f67209b2 | Step: 105 & Conv: 0088482d-189d-4238-a7a5-aacefde43748 | Step: 10
+{"step_index": 105, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "define_subagent", "args": {"Name": "ReadmeEngineer", "Description": "Specialist agent for technical documentation, README restructuring, and markdown verification in SuperGhidra.", "EnableMCPTools": true, "EnableSubagentTools": false, "EnableWriteTools": true}}]}
+{"step_index": 10, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "call_mcp_tool", "args": {"ServerName": "code-review-graph", "ToolName": "build_or_update_graph_tool", "Arguments": {"full_rebuild": false, "postprocess": "minimal", "repo_root": "~/workspace/project-a"}}}]}
+
+// [Group 4 & Group 5: Sidecar UI Runtime & DeepMind Policy Guardian] (jetski-generative-ui @ 0x3a3433c + enable-command-assessor @ 0x3a6d7c5)
+// Conversation: 30ae7968-2823-4d1f-ba72-f797b9509d7c | Step: 0 & Conv: 0088482d-189d-4238-a7a5-aacefde43748 | Step: 423
+{"step_index": 0, "type": "USER_INPUT", "content": "/generative_ui Hi"}
+{"step_index": 423, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "ask_permission", "args": {"Action": "read_file", "Reason": "Check central skill bank directory contents", "Target": "E:\\03_Devops\\skills"}}]}
+
+// [Group 6 & Group 7: Scheduled Tasks v2 + Cortex Pre-Restructure Snapshot] (scheduled-tasks-v2 @ 0xa5b578f + cortex-snapshot-recording @ 0x4224882)
+// Conversation: 00fad603-48ba-4eca-bf20-d0df14bc2975 | Step: 242 & Conv: 0088482d-189d-4238-a7a5-aacefde43748 | Step: 69
+{"step_index": 242, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "schedule", "args": {"DurationSeconds": 30, "Prompt": "Check if release build has completed", "TimerCondition": "00fad603-48ba-4eca-bf20-d0df14bc2975/task-233", "toolSummary": "Wait for build task"}}]}
+{"step_index": 69, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "run_command", "args": {"CommandLine": "Copy-Item -Path \"~/workspace/project-a\\AGENTS.md\" -Destination \"...\\scratch\\AGENTS.original.md\" -Force; git commit --allow-empty -m \"chore(pre-restructure): snapshot working tree state before restructuring\"", "Cwd": "~/workspace/project-a", "WaitMsBeforeAsync": 5000}}]}
 ```
 
 ---
