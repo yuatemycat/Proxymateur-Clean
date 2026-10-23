@@ -277,6 +277,10 @@ python scripts/benchmark_antigravity_lab.py
 
 ### Verified Real Transcript Proof of Usage (All 7 Paired Flag Clusters)
 
+Full sanitized telemetry datasets and benchmark outputs are available at:
+* **Verified Proof Records**: [`docs/telemetry/verified_transcript_proofs.jsonl`](docs/telemetry/verified_transcript_proofs.jsonl) ([View on GitHub](https://github.com/yuatemycat/Proxymateur-Clean/blob/main/docs/telemetry/verified_transcript_proofs.jsonl))
+* **Forensic Benchmark Suite Results**: [`docs/telemetry/antigravity_lab_benchmark_results.json`](docs/telemetry/antigravity_lab_benchmark_results.json) ([View on GitHub](https://github.com/yuatemycat/Proxymateur-Clean/blob/main/docs/telemetry/antigravity_lab_benchmark_results.json))
+
 The following untruncated JSONL records are extracted directly from `~/.gemini/antigravity-cli/brain/<conversation-id>/.system_generated/logs/transcript_full.jsonl` (each verified by `scratch/verify_and_stage.py` against its on-disk `step_index`), demonstrating real runtime invocations across all 7 paired flag clusters and contrasting them against native `/boost` and `/teamwork-preview`:
 
 ```jsonl

@@ -1,0 +1,1207 @@
+{
+  "timestamp": "2026-10-23T10:24:40Z",
+  "duration_seconds": 7.5195,
+  "binary_forensics": {
+    "binary_exists": true,
+    "binary_size_bytes": 204027392,
+    "image_base": "0x140000000",
+    "verified_flags_in_binary": 54,
+    "native_commands_verified": 12,
+    "native_commands": [
+      {
+        "index": 0,
+        "raw_offset": "0xbe58cf8",
+        "name": "goal",
+        "description": "Run until the specified goal is completely finished."
+      },
+      {
+        "index": 1,
+        "raw_offset": "0xbe58d60",
+        "name": "compact",
+        "description": "Compact the conversation now (summarize history to free up the context window)."
+      },
+      {
+        "index": 2,
+        "raw_offset": "0xbe58dc8",
+        "name": "schedule",
+        "description": "Run an instruction on a recurring schedule or as a one-time timer."
+      },
+      {
+        "index": 3,
+        "raw_offset": "0xbe58e30",
+        "name": "browser",
+        "description": "Invoke a browser agent for web tasks."
+      },
+      {
+        "index": 4,
+        "raw_offset": "0xbe58e98",
+        "name": "browser-vision",
+        "description": "[Teamfood] Invoke a browser with computer-use tools only with experimental model."
+      },
+      {
+        "index": 5,
+        "raw_offset": "0xbe58f00",
+        "name": "plan",
+        "description": "Plan carefully before executing a task."
+      },
+      {
+        "index": 6,
+        "raw_offset": "0xbe58f68",
+        "name": "grill-me",
+        "description": "Interview me to align on a plan."
+      },
+      {
+        "index": 7,
+        "raw_offset": "0xbe58fd0",
+        "name": "teamwork",
+        "description": "Invoke a team of agents to autonomously tackle large projects."
+      },
+      {
+        "index": 8,
+        "raw_offset": "0xbe59038",
+        "name": "learn",
+        "description": "Reflect on recent successes or corrections to capture reusable skills or rules."
+      },
+      {
+        "index": 9,
+        "raw_offset": "0xbe590a0",
+        "name": "boost",
+        "description": "Invoke the Boost multi-agent orchestrator for complex tasks."
+      },
+      {
+        "index": 10,
+        "raw_offset": "0xbe59108",
+        "name": "deepagent",
+        "description": "Experimental. Invoke the deep agent to plan, build, verify complex coding tasks."
+      },
+      {
+        "index": 11,
+        "raw_offset": "0xbe59170",
+        "name": "review-agent",
+        "description": "Experimental. Invoke the review agent to audit code changes, surface bugs, and verify correctness."
+      }
+    ],
+    "proxcv_commands_verified": 11,
+    "proxcv_code_va": "0x14e574000",
+    "proxcv_code_raw": "0xc292600",
+    "proxcv_data_va": "0x14e574400",
+    "proxcv_data_raw": "0xc292a00",
+    "proxcv_commands": [
+      {
+        "index": 0,
+        "slot_va": "0x14e574400",
+        "slot_raw": "0xc292a00",
+        "name": "battle",
+        "description": "Colosseum Battle Mode. Competing subagents in an adversarial arena."
+      },
+      {
+        "index": 1,
+        "slot_va": "0x14e574438",
+        "slot_raw": "0xc292a38",
+        "name": "owl",
+        "description": "Deep codebase investigation, iterative autonomous synthesis."
+      },
+      {
+        "index": 2,
+        "slot_va": "0x14e574470",
+        "slot_raw": "0xc292a70",
+        "name": "swarm",
+        "description": "Autonomous Multi-Agent Swarm Hub. Coordinates parallel specialist subagents."
+      },
+      {
+        "index": 3,
+        "slot_va": "0x14e5744a8",
+        "slot_raw": "0xc292aa8",
+        "name": "benchmark",
+        "description": "Programmatic Tool Synthesis & Performance Benchmarking."
+      },
+      {
+        "index": 4,
+        "slot_va": "0x14e5744e0",
+        "slot_raw": "0xc292ae0",
+        "name": "generative_ui",
+        "description": "Render dynamic interactive UI widgets, charts, and visualizations."
+      },
+      {
+        "index": 5,
+        "slot_va": "0x14e574518",
+        "slot_raw": "0xc292b18",
+        "name": "compact",
+        "description": "Compact and prune active conversation context history."
+      },
+      {
+        "index": 6,
+        "slot_va": "0x14e574550",
+        "slot_raw": "0xc292b50",
+        "name": "teamwork-preview",
+        "description": "Multi-agent teamwork subagent orchestrator and parallel preview execution."
+      },
+      {
+        "index": 7,
+        "slot_va": "0x14e574588",
+        "slot_raw": "0xc292b88",
+        "name": "teamwork",
+        "description": "Multi-agent teamwork subagent orchestrator (canonical alias)."
+      },
+      {
+        "index": 8,
+        "slot_va": "0x14e5745c0",
+        "slot_raw": "0xc292bc0",
+        "name": "teamwork-previews",
+        "description": "Multi-agent teamwork subagent orchestrator (plural alias)."
+      },
+      {
+        "index": 9,
+        "slot_va": "0x14e5745f8",
+        "slot_raw": "0xc292bf8",
+        "name": "team",
+        "description": "Multi-agent teamwork subagent orchestrator (shorthand alias)."
+      },
+      {
+        "index": 10,
+        "slot_va": "0x14e574630",
+        "slot_raw": "0xc292c30",
+        "name": "flash",
+        "description": "Quick prompt execution with Gemini Flash model."
+      }
+    ],
+    "proxcv_marker_offset": "0xc292fda",
+    "scan_seconds": 2.4817,
+    "flag_offsets": {
+      "jetski_autonomous_mode": {
+        "kebab": "jetski-autonomous-mode",
+        "group": "group_1_multi_agent_swarm",
+        "agy_offset": "0x3a59f1c",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a59f1c",
+        "raw_snake": null
+      },
+      "disable_teamwork_forced_flash_model": {
+        "kebab": "disable-teamwork-forced-flash-model",
+        "group": "group_1_multi_agent_swarm",
+        "agy_offset": "0x3aeda74",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3aeda74",
+        "raw_snake": null
+      },
+      "enable_subagent_hub": {
+        "kebab": "enable-subagent-hub",
+        "group": "group_1_multi_agent_swarm",
+        "agy_offset": "0x3a22b73",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a22b73",
+        "raw_snake": null
+      },
+      "enable_swarm_monitor": {
+        "kebab": "enable-swarm-monitor",
+        "group": "group_1_multi_agent_swarm",
+        "agy_offset": "0x3a36434",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a36434",
+        "raw_snake": null
+      },
+      "enable_fork_with_subagents": {
+        "kebab": "enable-fork-with-subagents",
+        "group": "group_1_multi_agent_swarm",
+        "agy_offset": "0x3a9617a",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a9617a",
+        "raw_snake": null
+      },
+      "send_subagent_initial_prompt_as_message": {
+        "kebab": "send-subagent-initial-prompt-as-message",
+        "group": "group_1_multi_agent_swarm",
+        "agy_offset": "0x3b0983f",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3b0983f",
+        "raw_snake": null
+      },
+      "enable_swarm_narrator": {
+        "kebab": "enable-swarm-narrator",
+        "group": "group_1_multi_agent_swarm",
+        "agy_offset": "0x3a476f5",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a476f5",
+        "raw_snake": null
+      },
+      "enable_image_generator_subagent": {
+        "kebab": "enable-image-generator-subagent",
+        "group": "group_1_multi_agent_swarm",
+        "agy_offset": "0x3acc025",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3acc025",
+        "raw_snake": null
+      },
+      "enable_owl_slash_command": {
+        "kebab": "enable-owl-slash-command",
+        "group": "group_2_deep_exploration_arena",
+        "agy_offset": "0x3a7b7e6",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a7b7e6",
+        "raw_snake": null
+      },
+      "enable_compact_slash_command": {
+        "kebab": "enable-compact-slash-command",
+        "group": "group_2_deep_exploration_arena",
+        "agy_offset": "0x3aad9c8",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3aad9c8",
+        "raw_snake": null
+      },
+      "enable_battle_mode": {
+        "kebab": "enable-battle-mode",
+        "group": "group_2_deep_exploration_arena",
+        "agy_offset": "0x3ad50c3",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3ad50c3",
+        "raw_snake": null
+      },
+      "enable_battle_mode_custom_agents": {
+        "kebab": "enable-battle-mode-custom-agents",
+        "group": "group_2_deep_exploration_arena",
+        "agy_offset": "0x3ad50c3",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3ad50c3",
+        "raw_snake": null
+      },
+      "enable_programmatic_tools": {
+        "kebab": "enable-programmatic-tools",
+        "group": "group_2_deep_exploration_arena",
+        "agy_offset": "0x3a88e31",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a88e31",
+        "raw_snake": null
+      },
+      "jetski_generative_ui": {
+        "kebab": "jetski-generative-ui",
+        "group": "group_2_deep_exploration_arena",
+        "agy_offset": "0x3a3433c",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a3433c",
+        "raw_snake": null
+      },
+      "enable_deepagent": {
+        "kebab": "enable-deepagent",
+        "group": "group_2_deep_exploration_arena",
+        "agy_offset": "0x39ebaff",
+        "matched_form": "kebab",
+        "raw_kebab": "0x39ebaff",
+        "raw_snake": null
+      },
+      "enable_review": {
+        "kebab": "enable-review",
+        "group": "group_2_deep_exploration_arena",
+        "agy_offset": "0x39a9c5b",
+        "matched_form": "kebab",
+        "raw_kebab": "0x39a9c5b",
+        "raw_snake": null
+      },
+      "enable_plugins": {
+        "kebab": "enable-plugins",
+        "group": "group_3_customizations_plugins",
+        "agy_offset": "0x39be85d",
+        "matched_form": "kebab",
+        "raw_kebab": "0x39be85d",
+        "raw_snake": null
+      },
+      "enable_hook_status": {
+        "kebab": "enable-hook-status",
+        "group": "group_3_customizations_plugins",
+        "agy_offset": "0x3a10763",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a10763",
+        "raw_snake": "0x42246d2"
+      },
+      "enable_customization_kind_agent": {
+        "kebab": "enable-customization-kind-agent",
+        "group": "group_3_customizations_plugins",
+        "agy_offset": "0xa5b5301",
+        "matched_form": "kebab",
+        "raw_kebab": "0xa5b5301",
+        "raw_snake": null
+      },
+      "enable_customization_kind_skill": {
+        "kebab": "enable-customization-kind-skill",
+        "group": "group_3_customizations_plugins",
+        "agy_offset": "0xa5b53e0",
+        "matched_form": "kebab",
+        "raw_kebab": "0xa5b53e0",
+        "raw_snake": null
+      },
+      "enable_customization_kind_rule": {
+        "kebab": "enable-customization-kind-rule",
+        "group": "group_3_customizations_plugins",
+        "agy_offset": "0xa5b53b4",
+        "matched_form": "kebab",
+        "raw_kebab": "0xa5b53b4",
+        "raw_snake": null
+      },
+      "enable_customization_kind_mcp": {
+        "kebab": "enable-customization-kind-mcp",
+        "group": "group_3_customizations_plugins",
+        "agy_offset": "0xa5b535b",
+        "matched_form": "kebab",
+        "raw_kebab": "0xa5b535b",
+        "raw_snake": null
+      },
+      "enable_customization_kind_hooks": {
+        "kebab": "enable-customization-kind-hooks",
+        "group": "group_3_customizations_plugins",
+        "agy_offset": "0xa5b532e",
+        "matched_form": "kebab",
+        "raw_kebab": "0xa5b532e",
+        "raw_snake": null
+      },
+      "deprecate_workflows": {
+        "kebab": "deprecate-workflows",
+        "group": "group_3_customizations_plugins",
+        "agy_offset": "0x3a24a9f",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a24a9f",
+        "raw_snake": null
+      },
+      "enable_sidecars": {
+        "kebab": "enable-sidecars",
+        "group": "group_4_sidecars_runtime",
+        "agy_offset": "0xa5b5577",
+        "matched_form": "kebab",
+        "raw_kebab": "0xa5b5577",
+        "raw_snake": null
+      },
+      "enable_ui_sidecars": {
+        "kebab": "enable-ui-sidecars",
+        "group": "group_4_sidecars_runtime",
+        "agy_offset": "0x3a12305",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a12305",
+        "raw_snake": null
+      },
+      "enable_sidecar_sdk": {
+        "kebab": "enable-sidecar-sdk",
+        "group": "group_4_sidecars_runtime",
+        "agy_offset": "0x3a1095b",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a1095b",
+        "raw_snake": null
+      },
+      "jetski_sidecar_declared_permissions": {
+        "kebab": "jetski-sidecar-declared-permissions",
+        "group": "group_4_sidecars_runtime",
+        "agy_offset": "0x3aec287",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3aec287",
+        "raw_snake": null
+      },
+      "sidecar_gateway": {
+        "kebab": "sidecar-gateway",
+        "group": "group_4_sidecars_runtime",
+        "agy_offset": "0x39d4fd1",
+        "matched_form": "kebab",
+        "raw_kebab": "0x39d4fd1",
+        "raw_snake": null
+      },
+      "sidecar_iframe_prewarm": {
+        "kebab": "sidecar-iframe-prewarm",
+        "group": "group_4_sidecars_runtime",
+        "agy_offset": "0xa5b582a",
+        "matched_form": "kebab",
+        "raw_kebab": "0xa5b582a",
+        "raw_snake": null
+      },
+      "enable_command_assessor": {
+        "kebab": "enable-command-assessor",
+        "group": "group_5_deepmind_safety_guardrails",
+        "agy_offset": "0x3a6d7c5",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a6d7c5",
+        "raw_snake": null
+      },
+      "enable_command_antivirus": {
+        "kebab": "enable-command-antivirus",
+        "group": "group_5_deepmind_safety_guardrails",
+        "agy_offset": "0x3a7b876",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a7b876",
+        "raw_snake": null
+      },
+      "allow_experimental_monitors": {
+        "kebab": "allow-experimental-monitors",
+        "group": "group_5_deepmind_safety_guardrails",
+        "agy_offset": "0x3aa20e0",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3aa20e0",
+        "raw_snake": "0x4224bcc"
+      },
+      "enable_citc_workspace_hygiene_rule": {
+        "kebab": "enable-citc-workspace-hygiene-rule",
+        "group": "group_5_deepmind_safety_guardrails",
+        "agy_offset": "0x3ae63e9",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3ae63e9",
+        "raw_snake": null
+      },
+      "disable_stained_loas2_creds": {
+        "kebab": "disable-stained-loas2-creds",
+        "group": "group_5_deepmind_safety_guardrails",
+        "agy_offset": "0x3aa20aa",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3aa20aa",
+        "raw_snake": null
+      },
+      "enable_browser_subagent_v2": {
+        "kebab": "enable-browser-subagent-v2",
+        "group": "group_5_deepmind_safety_guardrails",
+        "agy_offset": "0x3a96112",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a96112",
+        "raw_snake": "0x422aac4"
+      },
+      "enable_persistent_terminals": {
+        "kebab": "enable-persistent-terminals",
+        "group": "group_6_terminal_resilience",
+        "agy_offset": "0x3aa2074",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3aa2074",
+        "raw_snake": null
+      },
+      "enable_pty": {
+        "kebab": "enable-pty",
+        "group": "group_6_terminal_resilience",
+        "agy_offset": "0x39599b3",
+        "matched_form": "kebab",
+        "raw_kebab": "0x39599b3",
+        "raw_snake": "0x4227939"
+      },
+      "enable_ripgrep_path_search": {
+        "kebab": "enable-ripgrep-path-search",
+        "group": "group_6_terminal_resilience",
+        "agy_offset": "0x3a946f8",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a946f8",
+        "raw_snake": null
+      },
+      "enable_wait_tool": {
+        "kebab": "enable-wait-tool",
+        "group": "group_6_terminal_resilience",
+        "agy_offset": "0x39e9e1f",
+        "matched_form": "kebab",
+        "raw_kebab": "0x39e9e1f",
+        "raw_snake": null
+      },
+      "scheduled_tasks_v2": {
+        "kebab": "scheduled-tasks-v2",
+        "group": "group_6_terminal_resilience",
+        "agy_offset": "0xa5b578f",
+        "matched_form": "kebab",
+        "raw_kebab": "0xa5b578f",
+        "raw_snake": null
+      },
+      "enable_model_capacity_exhausted_retries": {
+        "kebab": "enable-model-capacity-exhausted-retries",
+        "group": "group_6_terminal_resilience",
+        "agy_offset": "0x3b09f8f",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3b09f8f",
+        "raw_snake": null
+      },
+      "enable_mcp_non_blocking_turn_load": {
+        "kebab": "enable-mcp-non-blocking-turn-load",
+        "group": "group_6_terminal_resilience",
+        "agy_offset": "0x3adde96",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3adde96",
+        "raw_snake": null
+      },
+      "enable_remote_agent_fastpush_pin": {
+        "kebab": "enable-remote-agent-fastpush-pin",
+        "group": "group_6_terminal_resilience",
+        "agy_offset": "0x3ad38e3",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3ad38e3",
+        "raw_snake": null
+      },
+      "cortex_snapshot_recording": {
+        "kebab": "cortex-snapshot-recording",
+        "group": "group_7_cortex_planning_trajectory",
+        "agy_offset": "0x3a88e95",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a88e95",
+        "raw_snake": "0x4224882"
+      },
+      "cortex_snapshot_revert": {
+        "kebab": "cortex-snapshot-revert",
+        "group": "group_7_cortex_planning_trajectory",
+        "agy_offset": "0x3a59f74",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a59f74",
+        "raw_snake": "0x4224641"
+      },
+      "enable_conversation_search_v2": {
+        "kebab": "enable-conversation-search-v2",
+        "group": "group_7_cortex_planning_trajectory",
+        "agy_offset": "0x3ab6a86",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3ab6a86",
+        "raw_snake": null
+      },
+      "show_model_selection_change": {
+        "kebab": "show-model-selection-change",
+        "group": "group_7_cortex_planning_trajectory",
+        "agy_offset": "0x3aa20c5",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3aa20c5",
+        "raw_snake": "0x4225c4f"
+      },
+      "use_component_rewrite": {
+        "kebab": "use-component-rewrite",
+        "group": "group_7_cortex_planning_trajectory",
+        "agy_offset": "0x3a45832",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a45832",
+        "raw_snake": null
+      },
+      "use_core_direct": {
+        "kebab": "use-core-direct",
+        "group": "group_7_cortex_planning_trajectory",
+        "agy_offset": "0xa5b5895",
+        "matched_form": "kebab",
+        "raw_kebab": "0xa5b5895",
+        "raw_snake": "0x42245a8"
+      },
+      "use_slash_plan": {
+        "kebab": "use-slash-plan",
+        "group": "group_7_cortex_planning_trajectory",
+        "agy_offset": "0x39bfa3f",
+        "matched_form": "kebab",
+        "raw_kebab": "0x39bfa3f",
+        "raw_snake": "0x422e493"
+      },
+      "enable_voice_activity_events": {
+        "kebab": "enable-voice-activity-events",
+        "group": "group_7_cortex_planning_trajectory",
+        "agy_offset": "0x3e4e85d",
+        "matched_form": "snake",
+        "raw_kebab": null,
+        "raw_snake": "0x3e4e85d"
+      },
+      "cascade_enable_notebook_edit_tool": {
+        "kebab": "cascade-enable-notebook-edit-tool",
+        "group": "group_7_cortex_planning_trajectory",
+        "agy_offset": "0x3adde54",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3adde54",
+        "raw_snake": null
+      },
+      "cascade_use_sed_edit_tool": {
+        "kebab": "cascade-use-sed-edit-tool",
+        "group": "group_7_cortex_planning_trajectory",
+        "agy_offset": "0x3a88e7c",
+        "matched_form": "kebab",
+        "raw_kebab": "0x3a88e7c",
+        "raw_snake": null
+      }
+    }
+  },
+  "flag_matrix_and_sync": {
+    "total_flags": 54,
+    "translation_ops_sec": 8341714,
+    "regex_passes": 54,
+    "regex_failures": [],
+    "settings_active_flags": 36,
+    "gui_active_flags": 35,
+    "synced_flag_count": 35
+  },
+  "transcript_telemetry": {
+    "conversations_scanned": 479,
+    "lines_scanned": 178323,
+    "scan_seconds": 4.6449,
+    "scan_lines_per_sec": 38391,
+    "total_invoke_subagent_calls": 82,
+    "total_spawned_subagents": 154,
+    "subagent_models": {
+      "flash": 23,
+      "inherit": 131
+    },
+    "subagent_typenames": {
+      "self": 130,
+      "ReadmeEngineer": 2,
+      "ClaudeAgentSpecialist": 1,
+      "gladiator_canvas_a": 1,
+      "gladiator_webgl_b": 1,
+      "research": 6,
+      "DeepCoder": 4,
+      "DeepCoderWorkerL0": 2,
+      "DeepInvestigator": 1,
+      "milestone_worker": 3,
+      "path_sanitizer_core": 1,
+      "path_sanitizer_tests": 1,
+      "DeepCoderImprovementWorker": 1
+    },
+    "tool_call_totals": {
+      "run_command": 40200,
+      "view_file": 19211,
+      "manage_task": 8515,
+      "write_to_file": 4128,
+      "replace_file_content": 3366,
+      "read_file": 2138,
+      "call_mcp_tool": 1539,
+      "manage_subagents": 865,
+      "write_file": 860,
+      "edit_file": 553,
+      "schedule": 270,
+      "search_web": 181,
+      "send_message": 163,
+      "invoke_subagent": 82,
+      "read_url_content": 22,
+      "ask_question": 21,
+      "define_subagent": 10,
+      "grep_search": 5,
+      "list_dir": 4,
+      "tail_task_log": 4,
+      "agy-context-guard:tail_task_log": 3,
+      "find_by_name": 2,
+      "list_resources": 1,
+      "generate_image": 1
+    },
+    "top_mcp_tools": {
+      "agy-context-guard/tail_task_log": 489,
+      "pyghidra/decompile_function": 182,
+      "pyghidra/disassemble": 112,
+      "code-review-graph/build_or_update_graph_tool": 99,
+      "SuperghidraMCP/decompile_function": 89,
+      "code-review-graph/list_graph_stats_tool": 77,
+      "SuperghidraMCP/disassemble": 69,
+      "pyghidra/read_bytes": 44,
+      "SuperghidraMCP/list_project_binaries": 41,
+      "pyghidra/list_project_binaries": 32,
+      "memory/create_entities": 31,
+      "pyghidra/list_xrefs": 26,
+      "SuperghidraMCP/list_xrefs": 22,
+      "memory/add_observations": 21,
+      "SuperghidraMCP/list_project_binary_metadata": 18
+    },
+    "workflow_comparison": {
+      "/swarm": {
+        "invocations": 90,
+        "unique_sessions": 43,
+        "window_steps": 36844,
+        "avg_steps_per_invocation": 409.4,
+        "window_tool_calls": 17457,
+        "avg_tools_per_invocation": 194.0,
+        "session_steps": 51445,
+        "avg_steps_per_session": 1196.4,
+        "session_tool_calls": 24320,
+        "avg_tools_per_session": 565.6,
+        "invoke_subagent_calls": 65,
+        "spawned_subagents": 129,
+        "manage_subagents_calls": 824,
+        "define_subagent_calls": 8,
+        "send_message_calls": 19,
+        "ask_question_calls": 1,
+        "ask_question_invocations": 1,
+        "ask_question_rate_pct": 1.1,
+        "schedule_calls": 62,
+        "subagent_models": {
+          "flash": 17,
+          "inherit": 112
+        },
+        "subagent_typenames": {
+          "self": 113,
+          "ReadmeEngineer": 2,
+          "ClaudeAgentSpecialist": 1,
+          "research": 5,
+          "DeepCoder": 2,
+          "DeepInvestigator": 1,
+          "milestone_worker": 3,
+          "path_sanitizer_core": 1,
+          "path_sanitizer_tests": 1
+        }
+      },
+      "/learn": {
+        "invocations": 31,
+        "unique_sessions": 26,
+        "window_steps": 13859,
+        "avg_steps_per_invocation": 447.1,
+        "window_tool_calls": 6310,
+        "avg_tools_per_invocation": 203.5,
+        "session_steps": 37337,
+        "avg_steps_per_session": 1436.0,
+        "session_tool_calls": 17036,
+        "avg_tools_per_session": 655.2,
+        "invoke_subagent_calls": 1,
+        "spawned_subagents": 2,
+        "manage_subagents_calls": 7,
+        "define_subagent_calls": 0,
+        "send_message_calls": 0,
+        "ask_question_calls": 2,
+        "ask_question_invocations": 2,
+        "ask_question_rate_pct": 6.5,
+        "schedule_calls": 22,
+        "subagent_models": {
+          "inherit": 2
+        },
+        "subagent_typenames": {
+          "research": 2
+        }
+      },
+      "/compact": {
+        "invocations": 31,
+        "unique_sessions": 19,
+        "window_steps": 11772,
+        "avg_steps_per_invocation": 379.7,
+        "window_tool_calls": 5202,
+        "avg_tools_per_invocation": 167.8,
+        "session_steps": 39004,
+        "avg_steps_per_session": 2052.8,
+        "session_tool_calls": 17948,
+        "avg_tools_per_session": 944.6,
+        "invoke_subagent_calls": 0,
+        "spawned_subagents": 0,
+        "manage_subagents_calls": 2,
+        "define_subagent_calls": 0,
+        "send_message_calls": 1,
+        "ask_question_calls": 0,
+        "ask_question_invocations": 0,
+        "ask_question_rate_pct": 0.0,
+        "schedule_calls": 20,
+        "subagent_models": {},
+        "subagent_typenames": {}
+      },
+      "/owl": {
+        "invocations": 29,
+        "unique_sessions": 25,
+        "window_steps": 12444,
+        "avg_steps_per_invocation": 429.1,
+        "window_tool_calls": 5947,
+        "avg_tools_per_invocation": 205.1,
+        "session_steps": 19796,
+        "avg_steps_per_session": 791.8,
+        "session_tool_calls": 9355,
+        "avg_tools_per_session": 374.2,
+        "invoke_subagent_calls": 7,
+        "spawned_subagents": 8,
+        "manage_subagents_calls": 12,
+        "define_subagent_calls": 2,
+        "send_message_calls": 0,
+        "ask_question_calls": 0,
+        "ask_question_invocations": 0,
+        "ask_question_rate_pct": 0.0,
+        "schedule_calls": 4,
+        "subagent_models": {
+          "inherit": 8
+        },
+        "subagent_typenames": {
+          "self": 4,
+          "DeepCoder": 2,
+          "DeepInvestigator": 1,
+          "research": 1
+        }
+      },
+      "/benchmark": {
+        "invocations": 11,
+        "unique_sessions": 10,
+        "window_steps": 4396,
+        "avg_steps_per_invocation": 399.6,
+        "window_tool_calls": 2133,
+        "avg_tools_per_invocation": 193.9,
+        "session_steps": 7788,
+        "avg_steps_per_session": 778.8,
+        "session_tool_calls": 3701,
+        "avg_tools_per_session": 370.1,
+        "invoke_subagent_calls": 3,
+        "spawned_subagents": 3,
+        "manage_subagents_calls": 162,
+        "define_subagent_calls": 1,
+        "send_message_calls": 0,
+        "ask_question_calls": 0,
+        "ask_question_invocations": 0,
+        "ask_question_rate_pct": 0.0,
+        "schedule_calls": 0,
+        "subagent_models": {
+          "inherit": 3
+        },
+        "subagent_typenames": {
+          "milestone_worker": 3
+        }
+      },
+      "/goal": {
+        "invocations": 9,
+        "unique_sessions": 7,
+        "window_steps": 3543,
+        "avg_steps_per_invocation": 393.7,
+        "window_tool_calls": 1565,
+        "avg_tools_per_invocation": 173.9,
+        "session_steps": 12830,
+        "avg_steps_per_session": 1832.9,
+        "session_tool_calls": 5845,
+        "avg_tools_per_session": 835.0,
+        "invoke_subagent_calls": 6,
+        "spawned_subagents": 6,
+        "manage_subagents_calls": 0,
+        "define_subagent_calls": 2,
+        "send_message_calls": 0,
+        "ask_question_calls": 1,
+        "ask_question_invocations": 1,
+        "ask_question_rate_pct": 11.1,
+        "schedule_calls": 1,
+        "subagent_models": {
+          "inherit": 6
+        },
+        "subagent_typenames": {
+          "DeepCoder": 2,
+          "DeepInvestigator": 1,
+          "self": 2,
+          "research": 1
+        }
+      },
+      "/battle": {
+        "invocations": 8,
+        "unique_sessions": 7,
+        "window_steps": 1175,
+        "avg_steps_per_invocation": 146.9,
+        "window_tool_calls": 545,
+        "avg_tools_per_invocation": 68.1,
+        "session_steps": 3008,
+        "avg_steps_per_session": 429.7,
+        "session_tool_calls": 1385,
+        "avg_tools_per_session": 197.9,
+        "invoke_subagent_calls": 2,
+        "spawned_subagents": 4,
+        "manage_subagents_calls": 7,
+        "define_subagent_calls": 2,
+        "send_message_calls": 2,
+        "ask_question_calls": 0,
+        "ask_question_invocations": 0,
+        "ask_question_rate_pct": 0.0,
+        "schedule_calls": 0,
+        "subagent_models": {
+          "inherit": 4
+        },
+        "subagent_typenames": {
+          "gladiator_canvas_a": 1,
+          "gladiator_webgl_b": 1,
+          "self": 2
+        }
+      },
+      "/plan": {
+        "invocations": 6,
+        "unique_sessions": 6,
+        "window_steps": 3397,
+        "avg_steps_per_invocation": 566.2,
+        "window_tool_calls": 1536,
+        "avg_tools_per_invocation": 256.0,
+        "session_steps": 7048,
+        "avg_steps_per_session": 1174.7,
+        "session_tool_calls": 3007,
+        "avg_tools_per_session": 501.2,
+        "invoke_subagent_calls": 0,
+        "spawned_subagents": 0,
+        "manage_subagents_calls": 0,
+        "define_subagent_calls": 0,
+        "send_message_calls": 0,
+        "ask_question_calls": 0,
+        "ask_question_invocations": 0,
+        "ask_question_rate_pct": 0.0,
+        "schedule_calls": 0,
+        "subagent_models": {},
+        "subagent_typenames": {}
+      },
+      "/boost": {
+        "invocations": 6,
+        "unique_sessions": 5,
+        "window_steps": 353,
+        "avg_steps_per_invocation": 58.8,
+        "window_tool_calls": 147,
+        "avg_tools_per_invocation": 24.5,
+        "session_steps": 1778,
+        "avg_steps_per_session": 355.6,
+        "session_tool_calls": 791,
+        "avg_tools_per_session": 158.2,
+        "invoke_subagent_calls": 5,
+        "spawned_subagents": 5,
+        "manage_subagents_calls": 0,
+        "define_subagent_calls": 0,
+        "send_message_calls": 1,
+        "ask_question_calls": 0,
+        "ask_question_invocations": 0,
+        "ask_question_rate_pct": 0.0,
+        "schedule_calls": 0,
+        "subagent_models": {
+          "inherit": 5
+        },
+        "subagent_typenames": {
+          "DeepCoder": 2,
+          "DeepCoderWorkerL0": 2,
+          "DeepCoderImprovementWorker": 1
+        }
+      },
+      "/teamwork-preview": {
+        "invocations": 5,
+        "unique_sessions": 5,
+        "window_steps": 1082,
+        "avg_steps_per_invocation": 216.4,
+        "window_tool_calls": 489,
+        "avg_tools_per_invocation": 97.8,
+        "session_steps": 5856,
+        "avg_steps_per_session": 1171.2,
+        "session_tool_calls": 2656,
+        "avg_tools_per_session": 531.2,
+        "invoke_subagent_calls": 2,
+        "spawned_subagents": 2,
+        "manage_subagents_calls": 0,
+        "define_subagent_calls": 0,
+        "send_message_calls": 0,
+        "ask_question_calls": 2,
+        "ask_question_invocations": 1,
+        "ask_question_rate_pct": 20.0,
+        "schedule_calls": 0,
+        "subagent_models": {
+          "inherit": 2
+        },
+        "subagent_typenames": {
+          "DeepCoder": 2
+        }
+      },
+      "/generative_ui": {
+        "invocations": 3,
+        "unique_sessions": 3,
+        "window_steps": 125,
+        "avg_steps_per_invocation": 41.7,
+        "window_tool_calls": 50,
+        "avg_tools_per_invocation": 16.7,
+        "session_steps": 1686,
+        "avg_steps_per_session": 562.0,
+        "session_tool_calls": 745,
+        "avg_tools_per_session": 248.3,
+        "invoke_subagent_calls": 0,
+        "spawned_subagents": 0,
+        "manage_subagents_calls": 0,
+        "define_subagent_calls": 0,
+        "send_message_calls": 0,
+        "ask_question_calls": 0,
+        "ask_question_invocations": 0,
+        "ask_question_rate_pct": 0.0,
+        "schedule_calls": 0,
+        "subagent_models": {},
+        "subagent_typenames": {}
+      },
+      "/btw": {
+        "invocations": 3,
+        "unique_sessions": 1,
+        "window_steps": 346,
+        "avg_steps_per_invocation": 115.3,
+        "window_tool_calls": 163,
+        "avg_tools_per_invocation": 54.3,
+        "session_steps": 575,
+        "avg_steps_per_session": 575.0,
+        "session_tool_calls": 272,
+        "avg_tools_per_session": 272.0,
+        "invoke_subagent_calls": 0,
+        "spawned_subagents": 0,
+        "manage_subagents_calls": 0,
+        "define_subagent_calls": 0,
+        "send_message_calls": 0,
+        "ask_question_calls": 0,
+        "ask_question_invocations": 0,
+        "ask_question_rate_pct": 0.0,
+        "schedule_calls": 2,
+        "subagent_models": {},
+        "subagent_typenames": {}
+      },
+      "/teamwork": {
+        "invocations": 1,
+        "unique_sessions": 1,
+        "window_steps": 2195,
+        "avg_steps_per_invocation": 2195.0,
+        "window_tool_calls": 1061,
+        "avg_tools_per_invocation": 1061.0,
+        "session_steps": 5502,
+        "avg_steps_per_session": 5502.0,
+        "session_tool_calls": 2600,
+        "avg_tools_per_session": 2600.0,
+        "invoke_subagent_calls": 0,
+        "spawned_subagents": 0,
+        "manage_subagents_calls": 0,
+        "define_subagent_calls": 0,
+        "send_message_calls": 0,
+        "ask_question_calls": 0,
+        "ask_question_invocations": 0,
+        "ask_question_rate_pct": 0.0,
+        "schedule_calls": 0,
+        "subagent_models": {},
+        "subagent_typenames": {}
+      },
+      "/queue": {
+        "invocations": 1,
+        "unique_sessions": 1,
+        "window_steps": 306,
+        "avg_steps_per_invocation": 306.0,
+        "window_tool_calls": 147,
+        "avg_tools_per_invocation": 147.0,
+        "session_steps": 306,
+        "avg_steps_per_session": 306.0,
+        "session_tool_calls": 147,
+        "avg_tools_per_session": 147.0,
+        "invoke_subagent_calls": 0,
+        "spawned_subagents": 0,
+        "manage_subagents_calls": 0,
+        "define_subagent_calls": 0,
+        "send_message_calls": 0,
+        "ask_question_calls": 0,
+        "ask_question_invocations": 0,
+        "ask_question_rate_pct": 0.0,
+        "schedule_calls": 0,
+        "subagent_models": {},
+        "subagent_typenames": {}
+      }
+    },
+    "authentic_proofs": {
+      "invoke_subagent": [
+        {
+          "conv_id": "0088482d-189d-4238-a7a5-aacefde43748",
+          "step_index": 71,
+          "subagent_count": 4,
+          "roles": [
+            "Tier 1 & Templates Architect",
+            "Tier 2 Domain Extractor",
+            "Tier 3 Runbook & Archive Engineer",
+            "Workspace & Runtime Hygiene Engineer"
+          ],
+          "models": {
+            "flash": 4
+          },
+          "typenames": {
+            "self": 4
+          }
+        },
+        {
+          "conv_id": "00acf6fa-ee44-432d-95f0-ebfad5730aa9",
+          "step_index": 486,
+          "subagent_count": 2,
+          "roles": [
+            "Native Cloak Engineer",
+            "Emulator Orchestrator"
+          ],
+          "models": {
+            "inherit": 2
+          },
+          "typenames": {
+            "self": 2
+          }
+        },
+        {
+          "conv_id": "0769d674-d262-4a96-b611-15c6d709510b",
+          "step_index": 31,
+          "subagent_count": 3,
+          "roles": [
+            "Daemon Architect",
+            "GPU & Evidence Ledger Builder",
+            "Storage & Analyzer Reformer"
+          ],
+          "models": {
+            "flash": 3
+          },
+          "typenames": {
+            "self": 3
+          }
+        },
+        {
+          "conv_id": "0769d674-d262-4a96-b611-15c6d709510b",
+          "step_index": 179,
+          "subagent_count": 3,
+          "roles": [
+            "IPC & GPU Seeder Specialist",
+            "Cache DAG & Delta Specialist",
+            "DWARF Pre-Indexer & Suite Integrator"
+          ],
+          "models": {
+            "flash": 3
+          },
+          "typenames": {
+            "self": 3
+          }
+        },
+        {
+          "conv_id": "0769d674-d262-4a96-b611-15c6d709510b",
+          "step_index": 210,
+          "subagent_count": 3,
+          "roles": [
+            "APK JNI & Cross-Platform Headless Specialist",
+            "P-Code & Native C++ Engine Specialist",
+            "Neural Decompiler & Spec Integrator"
+          ],
+          "models": {
+            "inherit": 3
+          },
+          "typenames": {
+            "self": 3
+          }
+        }
+      ],
+      "schedule": [
+        {
+          "conv_id": "00fad603-48ba-4eca-bf20-d0df14bc2975",
+          "step_index": 242,
+          "duration": 30,
+          "condition": "00fad603-48ba-4eca-bf20-d0df14bc2975/task-233"
+        },
+        {
+          "conv_id": "00fad603-48ba-4eca-bf20-d0df14bc2975",
+          "step_index": 250,
+          "duration": 45,
+          "condition": "00fad603-48ba-4eca-bf20-d0df14bc2975/task-233"
+        },
+        {
+          "conv_id": "0769d674-d262-4a96-b611-15c6d709510b",
+          "step_index": 896,
+          "duration": 3,
+          "condition": "0769d674-d262-4a96-b611-15c6d709510b/task-891"
+        },
+        {
+          "conv_id": "0c21832d-89dd-4c93-ad49-d94f1c7ac2de",
+          "step_index": 61,
+          "duration": 20,
+          "condition": "0c21832d-89dd-4c93-ad49-d94f1c7ac2de/task-60"
+        },
+        {
+          "conv_id": "0c21832d-89dd-4c93-ad49-d94f1c7ac2de",
+          "step_index": 67,
+          "duration": 20,
+          "condition": "0c21832d-89dd-4c93-ad49-d94f1c7ac2de/task-66"
+        }
+      ],
+      "define_subagent": [
+        {
+          "conv_id": "26066452-f54f-4c7c-87ef-42c8f67209b2",
+          "step_index": 105,
+          "name": "ReadmeEngineer",
+          "enable_mcp": true
+        },
+        {
+          "conv_id": "26066452-f54f-4c7c-87ef-42c8f67209b2",
+          "step_index": 107,
+          "name": "ClaudeAgentSpecialist",
+          "enable_mcp": true
+        },
+        {
+          "conv_id": "2ab783ff-52d9-4829-b8fc-029f27df17c5",
+          "step_index": 41,
+          "name": "gladiator_canvas_a",
+          "enable_mcp": false
+        },
+        {
+          "conv_id": "2ab783ff-52d9-4829-b8fc-029f27df17c5",
+          "step_index": 43,
+          "name": "gladiator_webgl_b",
+          "enable_mcp": false
+        },
+        {
+          "conv_id": "66b8364b-1ac0-41eb-98b6-7aa1f38bbded",
+          "step_index": 116,
+          "name": "DeepInvestigator",
+          "enable_mcp": true
+        }
+      ]
+    }
+  }
+}
