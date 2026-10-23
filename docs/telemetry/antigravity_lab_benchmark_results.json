@@ -668,17 +668,17 @@
       "pyghidra/decompile_function": 182,
       "pyghidra/disassemble": 112,
       "code-review-graph/build_or_update_graph_tool": 99,
-      "SuperghidraMCP/decompile_function": 89,
+      "ghidra-mcp/decompile_function": 89,
       "code-review-graph/list_graph_stats_tool": 77,
-      "SuperghidraMCP/disassemble": 69,
+      "ghidra-mcp/disassemble": 69,
       "pyghidra/read_bytes": 44,
-      "SuperghidraMCP/list_project_binaries": 41,
+      "ghidra-mcp/list_project_binaries": 41,
       "pyghidra/list_project_binaries": 32,
       "memory/create_entities": 31,
       "pyghidra/list_xrefs": 26,
-      "SuperghidraMCP/list_xrefs": 22,
+      "ghidra-mcp/list_xrefs": 22,
       "memory/add_observations": 21,
-      "SuperghidraMCP/list_project_binary_metadata": 18
+      "ghidra-mcp/list_project_binary_metadata": 18
     },
     "workflow_comparison": {
       "/swarm": {
