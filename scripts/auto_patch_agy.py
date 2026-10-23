@@ -1,3 +1,4 @@
+import bisect
 import glob
 import hashlib
 import struct
@@ -261,88 +262,149 @@ def _build_patched_image(data):
     pcln_offset = words[8]
     func_tab = raw_pcln + pcln_offset
 
-    new_reg_va = None
+    # Go functab entry_off is relative to the start of the text segment, which in
+    # these PE builds is the .text section VA (not a hardcoded 0x140001000).
+    text_base = next((s["va"] for s in sections if s["name"] == ".text"), image_base + 0x1000)
+
+    # Resolve every anchor we can by its Go symbol NAME. These names are the stable
+    # reference points; the byte-pattern / call-frequency heuristics below are kept
+    # only as fallbacks for a hypothetical stripped build.
+    CMD = "commands/commands."
+    WANTED_SUFFIX = {
+        "new_reg": CMD + "NewRegistry",
+        "register": CMD + "(*Registry).Register",
+        "ext_reg": CMD + "registerExternalCommands",
+        "gc_name": CMD + "(*GenericCommand).Name",
+        "gc_desc": CMD + "(*GenericCommand).Description",
+        "gc_exec": CMD + "(*GenericCommand).Execute",
+    }
+    named = {}
     morestack_va = None
+    all_entry_vas = []
     for i in range(nfunc):
         entry_off, func_info_off = struct.unpack_from("<II", data, func_tab + i * 8)
         info_ptr = raw_pcln + pcln_offset + func_info_off
-        if info_ptr + 8 >= len(data): continue
+        if info_ptr + 8 >= len(data):
+            continue
         n_off = struct.unpack_from("<i", data, info_ptr + 4)[0]
-        if 0 <= n_off and func_names_base + n_off < len(data):
-            end = data.find(b"\x00", func_names_base + n_off)
-            if end != -1:
-                fname = data[func_names_base + n_off : end].decode("latin-1", errors="ignore")
-                if fname.endswith("commands/commands.NewRegistry"):
-                    new_reg_va = 0x140001000 + entry_off
-                elif fname == "runtime.morestack":
-                    morestack_va = 0x140001000 + entry_off
-        if new_reg_va and morestack_va:
-            break
+        if not (0 <= n_off and func_names_base + n_off < len(data)):
+            continue
+        end = data.find(b"\x00", func_names_base + n_off)
+        if end == -1:
+            continue
+        fname = data[func_names_base + n_off:end].decode("latin-1", errors="ignore")
+        va = text_base + entry_off
+        all_entry_vas.append(va)
+        if fname == "runtime.morestack":
+            morestack_va = va
+            continue
+        for key, suffix in WANTED_SUFFIX.items():
+            if key not in named and fname.endswith(suffix):
+                named[key] = va
+                break
+
+    new_reg_va = named.get("new_reg")
+    register_named = named.get("register")
+    extreg_named = named.get("ext_reg")
+    name_named = named.get("gc_name")
+    desc_named = named.get("gc_desc")
+    exec_named = named.get("gc_exec")
 
     assert new_reg_va is not None, "Failed to locate commands.NewRegistry"
     assert morestack_va is not None, "Failed to locate runtime.morestack"
 
-    # 3. Dynamic call site & RegisterCommand discovery
+    # NewRegistry's exact size (next function entry), so the disassembly window
+    # always covers the whole function instead of a fixed 0x440 guess.
+    all_entry_vas.sort()
+    _ni = bisect.bisect_right(all_entry_vas, new_reg_va)
+    new_reg_size = (all_entry_vas[_ni] - new_reg_va) if _ni < len(all_entry_vas) else 0x800
+    new_reg_size = max(0x200, min(new_reg_size, 0x4000))
+
+    # 3. Dynamic call site & (*Registry).Register discovery
+    # Primary: pclntab symbol anchors ((*Registry).Register and registerExternalCommands).
+    # Fallback: call-frequency heuristic + post-registration sequential call detection.
     md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
     raw_new_reg = va_to_raw(new_reg_va)
-    code_chunk = data[raw_new_reg:raw_new_reg + 0x440]
+    assert raw_new_reg is not None, "commands.NewRegistry VA out of section bounds"
+    code_chunk = data[raw_new_reg:raw_new_reg + new_reg_size]
 
     calls = []
     for i in md.disasm(code_chunk, new_reg_va):
-        if i.mnemonic == 'call':
-            dest = int(i.op_str, 16) if i.op_str.startswith('0x') else None
-            calls.append((i.address, dest))
+        if i.mnemonic == "call":
+            dest = int(i.op_str, 16) if i.op_str.startswith("0x") else None
+            calls.append((i.address, dest, i.size))
 
     freq = {}
-    for addr, dest in calls:
-        freq[dest] = freq.get(dest, 0) + 1
+    for _, dest, _ in calls:
+        if dest is not None:
+            freq[dest] = freq.get(dest, 0) + 1
 
-    register_cmd_va = max(freq.items(), key=lambda x: x[1])[0]
-    
-    # In NewRegistry:
-    # Look for the last call in the sequential block of RegisterCommand calls
-    # Call #37 is the original call right after the 33 sequential RegisterCommand calls
-    last_seq_idx = -1
-    for idx, (addr, dest) in enumerate(calls):
-        if dest == register_cmd_va:
-            last_seq_idx = idx
-        elif last_seq_idx != -1 and dest != register_cmd_va:
-            # Found the call immediately following the sequential register block!
-            hook_idx = idx
-            break
+    freq_register_va = max(freq.items(), key=lambda x: x[1])[0] if freq else None
+    register_cmd_va = register_named or freq_register_va
+    assert register_cmd_va is not None, "Failed to locate (*Registry).Register"
 
-    call_site_va, original_call_va = calls[hook_idx]
+    hook_entry = None
+    if extreg_named is not None:
+        for addr, dest, size in calls:
+            if dest == extreg_named and size == 5:
+                hook_entry = (addr, dest, size)
+                break
+
+    if hook_entry is None:
+        last_seq_idx = -1
+        for idx, (addr, dest, size) in enumerate(calls):
+            if dest == register_cmd_va:
+                last_seq_idx = idx
+            elif last_seq_idx != -1 and dest != register_cmd_va and dest is not None and size == 5:
+                hook_entry = (addr, dest, size)
+                break
+
+    assert hook_entry is not None, "Failed to locate hook call site in commands.NewRegistry"
+    call_site_va, original_call_va, call_site_size = hook_entry
     call_site_raw = va_to_raw(call_site_va)
+    assert call_site_raw is not None and call_site_size == 5 and data[call_site_raw] == 0xE8, (
+        f"Hook call site 0x{call_site_va:x} is not a 5-byte relative call"
+    )
 
     # 4. Dynamic GenericCommand itab discovery
-    pat_name = bytes.fromhex("48 8b 08 48 8b 58 08 48 89 c8 c3")
-    pat_desc = bytes.fromhex("48 8b 48 10 48 8b 58 18 48 89 c8 c3")
-    pat_exec = bytes.fromhex("31 c0 c3")
+    # Primary: pclntab symbol VAs for (*GenericCommand).{Description,Execute,Name}.
+    # Fallback: instruction byte-pattern scan near NewRegistry for stripped builds.
+    name_va = name_named
+    desc_va = desc_named
+    exec_va = exec_named
+    if desc_va is None or exec_va is None:
+        pat_name = bytes.fromhex("48 8b 08 48 8b 58 08 48 89 c8 c3")
+        pat_desc = bytes.fromhex("48 8b 48 10 48 8b 58 18 48 89 c8 c3")
+        pat_exec = bytes.fromhex("31 c0 c3")
 
-    pos = 0
-    name_va = None
-    desc_va = None
-    exec_va = None
-    while True:
-        pos = data.find(pat_name, pos)
-        if pos == -1: break
-        desc_pos = data.find(pat_desc, pos, pos + 64)
-        if desc_pos != -1:
-            exec_pos = data.find(pat_exec, desc_pos, desc_pos + 64)
-            if exec_pos != -1:
-                curr_va = raw_to_va(pos)
-                if abs(curr_va - new_reg_va) < 0x200000:
-                    name_va = curr_va
-                    desc_va = raw_to_va(desc_pos)
-                    exec_va = raw_to_va(exec_pos)
-                    break
-        pos += len(pat_name)
+        pos = 0
+        while True:
+            pos = data.find(pat_name, pos)
+            if pos == -1:
+                break
+            desc_pos = data.find(pat_desc, pos, pos + 64)
+            if desc_pos != -1:
+                exec_pos = data.find(pat_exec, desc_pos, desc_pos + 64)
+                if exec_pos != -1:
+                    curr_va = raw_to_va(pos)
+                    if curr_va is not None and abs(curr_va - new_reg_va) < 0x200000:
+                        name_va = name_va or curr_va
+                        desc_va = desc_va or raw_to_va(desc_pos)
+                        exec_va = exec_va or raw_to_va(exec_pos)
+                        break
+            pos += len(pat_name)
 
-    assert desc_va and exec_va and name_va, "Failed to locate GenericCommand methods"
-    pat_itab = struct.pack("<QQ", desc_va, exec_va)
-    itab_pos = data.find(pat_itab)
+    assert desc_va and exec_va, "Failed to locate GenericCommand methods"
+    itab_pos = -1
+    if name_va:
+        # Go abi.ITab.Fun sorts interface methods alphabetically: Description, Execute, Name
+        itab_pos = data.find(struct.pack("<QQQ", desc_va, exec_va, name_va))
+    if itab_pos == -1:
+        itab_pos = data.find(struct.pack("<QQ", desc_va, exec_va))
+    assert itab_pos != -1, "Failed to locate GenericCommand itab in image"
     itab_raw = itab_pos - 0x18
     itab_va = raw_to_va(itab_raw)
+    assert itab_va is not None, "GenericCommand itab raw offset out of section bounds"
 
     # 5. Allocate a dedicated RWX section for the code cave and data cave.
     # Existing executable sections have no slack (the .text raw tail is ~64 bytes and

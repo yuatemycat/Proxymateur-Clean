@@ -360,6 +360,49 @@ pub struct AntigravityLabConfig {
     pub enable_model_capacity_exhausted_retries: bool,
     #[serde(default)]
     pub enable_mcp_non_blocking_turn_load: bool,
+    // Customizations 2.0
+    #[serde(default)]
+    pub enable_plugins: bool,
+    #[serde(default)]
+    pub enable_customization_kind_agent: bool,
+    #[serde(default)]
+    pub enable_customization_kind_skill: bool,
+    #[serde(default)]
+    pub enable_customization_kind_rule: bool,
+    #[serde(default)]
+    pub enable_customization_kind_hooks: bool,
+    #[serde(default)]
+    pub enable_customization_kind_mcp: bool,
+    #[serde(default)]
+    pub enable_hook_status: bool,
+    #[serde(default)]
+    pub deprecate_workflows: bool,
+    // Sidecars
+    #[serde(default)]
+    pub jetski_sidecar_declared_permissions: bool,
+    // DeepMind Safety & Guardrails
+    #[serde(default)]
+    pub enable_command_assessor: bool,
+    #[serde(default)]
+    pub allow_experimental_monitors: bool,
+    #[serde(default)]
+    pub enable_citc_workspace_hygiene_rule: bool,
+    // Subagent Orchestration & Messaging
+    #[serde(default)]
+    pub send_subagent_initial_prompt_as_message: bool,
+    #[serde(default)]
+    pub enable_compact_slash_command: bool,
+    // Engine, Planning & Execution
+    #[serde(default)]
+    pub use_component_rewrite: bool,
+    #[serde(default)]
+    pub use_core_direct: bool,
+    #[serde(default)]
+    pub use_slash_plan: bool,
+    #[serde(default)]
+    pub scheduled_tasks_v2: bool,
+    #[serde(default)]
+    pub show_model_selection_change: bool,
 }
 
 impl Default for AntigravityLabConfig {
@@ -400,6 +443,25 @@ impl Default for AntigravityLabConfig {
             cascade_use_sed_edit_tool: false,
             enable_model_capacity_exhausted_retries: false,
             enable_mcp_non_blocking_turn_load: false,
+            enable_plugins: false,
+            enable_customization_kind_agent: false,
+            enable_customization_kind_skill: false,
+            enable_customization_kind_rule: false,
+            enable_customization_kind_hooks: false,
+            enable_customization_kind_mcp: false,
+            enable_hook_status: false,
+            deprecate_workflows: false,
+            jetski_sidecar_declared_permissions: false,
+            enable_command_assessor: false,
+            allow_experimental_monitors: false,
+            enable_citc_workspace_hygiene_rule: false,
+            send_subagent_initial_prompt_as_message: false,
+            enable_compact_slash_command: false,
+            use_component_rewrite: false,
+            use_core_direct: false,
+            use_slash_plan: false,
+            scheduled_tasks_v2: false,
+            show_model_selection_change: false,
         }
     }
 }

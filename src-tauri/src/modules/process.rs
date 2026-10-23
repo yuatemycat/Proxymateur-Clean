@@ -1052,18 +1052,10 @@ pub fn inject_gateway_env(cmd: &mut std::process::Command) {
         let mode_override = std::env::var("PROXYMATEUR_AGY_MODE")
             .unwrap_or_default()
             .to_ascii_lowercase();
-        let preferred_is_proxy_disabled = config
-            .proxy
-            .preferred_account_id
-            .as_ref()
-            .and_then(|id| crate::modules::account::load_account(id).ok())
-            .map(|acc| acc.proxy_disabled)
-            .unwrap_or(false);
 
         let use_native = mode_override == "native"
             || config.proxy.allow_standard_gemini_models
-            || !config.proxy.enabled
-            || preferred_is_proxy_disabled;
+            || !config.proxy.enabled;
 
         if !use_native {
             let port = config.proxy.port;
@@ -1097,6 +1089,13 @@ pub fn inject_gateway_env(cmd: &mut std::process::Command) {
                                     detected_models.push(id.to_string());
                                 }
                             }
+                        } else if let Some(models) = json.get("models").and_then(|m| m.as_array()) {
+                            for item in models {
+                                if let Some(name) = item.get("name").and_then(|n| n.as_str()) {
+                                    let id = name.strip_prefix("models/").unwrap_or(name);
+                                    detected_models.push(id.to_string());
+                                }
+                            }
                         }
                     }
                 }
@@ -1122,22 +1121,88 @@ pub fn inject_gateway_env(cmd: &mut std::process::Command) {
 
             if !models_to_inject.is_empty() {
                 cmd.env("AGY_LLM_GATEWAY_MODELS", models_to_inject.join(","));
+
+                let flash_model = models_to_inject
+                    .iter()
+                    .find(|m| {
+                        let l = m.to_lowercase();
+                        l.contains("flash") && l.contains("high")
+                    })
+                    .or_else(|| {
+                        models_to_inject
+                            .iter()
+                            .find(|m| m.to_lowercase().contains("flash"))
+                    })
+                    .unwrap_or(&models_to_inject[0]);
+
+                let flash_lite_model = models_to_inject
+                    .iter()
+                    .find(|m| {
+                        let l = m.to_lowercase();
+                        l.contains("flash-lite") || l.contains("flash_lite")
+                    })
+                    .unwrap_or(flash_model);
+
+                let pro_model = models_to_inject
+                    .iter()
+                    .find(|m| {
+                        let l = m.to_lowercase();
+                        (l.contains("pro")
+                            || l.contains("argon")
+                            || l.contains("opus")
+                            || l.contains("sonnet"))
+                            && l.contains("high")
+                    })
+                    .or_else(|| {
+                        models_to_inject.iter().find(|m| {
+                            let l = m.to_lowercase();
+                            l.contains("pro")
+                                || l.contains("argon")
+                                || l.contains("opus")
+                                || l.contains("sonnet")
+                        })
+                    })
+                    .unwrap_or(&models_to_inject[0]);
+
+                cmd.env("AGY_LLM_GATEWAY_TIER_FLASH", flash_model);
+                cmd.env("AGY_LLM_GATEWAY_TIER_FLASH_LITE", flash_lite_model);
+                cmd.env("AGY_LLM_GATEWAY_TIER_PRO", pro_model);
+
+                cmd.env("HTTP_PROXY", &url);
+                cmd.env("HTTPS_PROXY", &url);
+                cmd.env("ALL_PROXY", &url);
+
                 crate::modules::logger::log_info(&format!(
-                    "[Process] Injected AGY_LLM_GATEWAY_* for Antigravity (mode={}, {} models)",
+                    "[Process] Injected AGY_LLM_GATEWAY_* for Antigravity (mode={}, {} models, tiers: flash={}, flash_lite={}, pro={})",
                     if is_argon_only { "argon_only" } else { "all" },
-                    models_to_inject.len()
+                    models_to_inject.len(),
+                    flash_model,
+                    flash_lite_model,
+                    pro_model
                 ));
             }
         } else {
             cmd.env_remove("AGY_LLM_GATEWAY_URL");
             cmd.env_remove("AGY_LLM_GATEWAY_MODELS");
             cmd.env_remove("AGY_LLM_GATEWAY_API_KEY");
-            cmd.env_remove("HTTP_PROXY");
-            cmd.env_remove("HTTPS_PROXY");
-            cmd.env_remove("ALL_PROXY");
-            cmd.env_remove("http_proxy");
-            cmd.env_remove("https_proxy");
-            cmd.env_remove("all_proxy");
+            cmd.env_remove("AGY_LLM_GATEWAY_TIER_FLASH");
+            cmd.env_remove("AGY_LLM_GATEWAY_TIER_FLASH_LITE");
+            cmd.env_remove("AGY_LLM_GATEWAY_TIER_PRO");
+
+            let upstream = &config.proxy.upstream_proxy;
+            if upstream.enabled && !upstream.url.trim().is_empty() {
+                let up_url = upstream.url.trim();
+                cmd.env("HTTP_PROXY", up_url);
+                cmd.env("HTTPS_PROXY", up_url);
+                cmd.env("ALL_PROXY", up_url);
+            } else {
+                cmd.env_remove("HTTP_PROXY");
+                cmd.env_remove("HTTPS_PROXY");
+                cmd.env_remove("ALL_PROXY");
+                cmd.env_remove("http_proxy");
+                cmd.env_remove("https_proxy");
+                cmd.env_remove("all_proxy");
+            }
         }
     }
 }

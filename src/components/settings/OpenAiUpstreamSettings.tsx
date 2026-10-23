@@ -98,6 +98,7 @@ export default function OpenAiUpstreamSettings({
     const { t: _t } = { t: (k: string, f?: string) => f || k };
 
     // Defensive normalization against legacy config schemas or undefined properties
+    const exposed = Array.isArray(config?.exposed_models) ? config.exposed_models : [];
     const safeConfig: OpenAiUpstreamConfig = {
         enabled: config?.enabled ?? DEFAULT_OPENAI_CONFIG.enabled,
         default_base_url: config?.default_base_url || (config as any)?.base_url || '',
@@ -124,6 +125,7 @@ export default function OpenAiUpstreamSettings({
     const [formBaseUrl, setFormBaseUrl] = useState('');
     const [formApiKey, setFormApiKey] = useState('');
     const [formTimeout, setFormTimeout] = useState<number | ''>('');
+    const [formExposeOnModel, setFormExposeOnModel] = useState(false);
     const [showFormKey, setShowFormKey] = useState(false);
 
     // Live testing status map: key is model_id
@@ -138,6 +140,12 @@ export default function OpenAiUpstreamSettings({
         onChange({ ...safeConfig, ...updates });
     };
 
+    const toggleExposed = (model: string, checked: boolean) => {
+        const current = safeConfig.exposed_models || [];
+        const next = checked ? [...current, model] : current.filter((m) => m !== model);
+        updateConfig({ exposed_models: Array.from(new Set(next)) });
+    };
+
     const handleOpenAdd = () => {
         setEditingIndex(null);
         setFormModelId('');
@@ -145,6 +153,7 @@ export default function OpenAiUpstreamSettings({
         setFormBaseUrl('');
         setFormApiKey('');
         setFormTimeout('');
+        setFormExposeOnModel(false);
         setShowFormKey(false);
         setModalProbeResult(null);
         setModalOpen(true);
@@ -159,6 +168,7 @@ export default function OpenAiUpstreamSettings({
         setFormBaseUrl(route.base_url || '');
         setFormApiKey(route.api_key || '');
         setFormTimeout(route.timeout_secs ?? '');
+        setFormExposeOnModel(exposed.includes(route.model_id));
         setShowFormKey(false);
         setModalProbeResult(null);
         setModalOpen(true);
@@ -189,6 +199,7 @@ export default function OpenAiUpstreamSettings({
         };
 
         const currentRoutes = [...safeConfig.routes];
+        const prevModelId = editingIndex !== null ? currentRoutes[editingIndex]?.model_id : null;
         if (editingIndex !== null && editingIndex >= 0 && editingIndex < currentRoutes.length) {
             currentRoutes[editingIndex] = newRoute;
         } else {
@@ -200,7 +211,14 @@ export default function OpenAiUpstreamSettings({
             currentRoutes.push(newRoute);
         }
 
-        updateConfig({ routes: currentRoutes });
+        let nextExposed = (safeConfig.exposed_models || []).filter(
+            (m) => m !== trimmedModelId && (!prevModelId || m !== prevModelId)
+        );
+        if (formExposeOnModel) {
+            nextExposed = [...nextExposed, trimmedModelId];
+        }
+
+        updateConfig({ routes: currentRoutes, exposed_models: nextExposed });
         setModalOpen(false);
         showToast(editingIndex !== null ? 'Model route updated' : 'Model route added', 'success');
     };
@@ -209,7 +227,8 @@ export default function OpenAiUpstreamSettings({
         const route = safeConfig.routes[index];
         if (!route) return;
         const nextRoutes = safeConfig.routes.filter((_, idx) => idx !== index);
-        updateConfig({ routes: nextRoutes });
+        const nextExposed = (safeConfig.exposed_models || []).filter((m) => m !== route.model_id);
+        updateConfig({ routes: nextRoutes, exposed_models: nextExposed });
         showToast(`Removed model "${route.model_id}"`, 'info');
     };
 
@@ -398,9 +417,14 @@ export default function OpenAiUpstreamSettings({
                         <h4 className="text-xs font-black uppercase tracking-wider text-base-content flex items-center gap-2">
                             <Activity className="w-4 h-4 text-lime-signal" />
                             Registered Model Routes ({safeConfig.routes.length})
+                            {exposed.length > 0 && (
+                                <span className="badge badge-xs badge-success font-mono text-[10px]">
+                                    {exposed.length} shown on /model
+                                </span>
+                            )}
                         </h4>
                         <p className="text-[11px] text-base-content/60">
-                            Models listed here automatically appear in the <span className="font-mono">/models</span> catalog and Antigravity CLI model picker.
+                            Only models explicitly checked below appear in the <span className="font-mono">/models</span> catalog and Antigravity CLI <span className="font-mono">/model</span> picker (like Vertex).
                         </p>
                     </div>
                     <button
@@ -428,6 +452,7 @@ export default function OpenAiUpstreamSettings({
                         {safeConfig.routes.map((route, index) => {
                             const isProbing = probingMap[route.model_id];
                             const probeRes = probeResultMap[route.model_id];
+                            const isExposed = exposed.includes(route.model_id);
                             return (
                                 <div
                                     key={route.model_id}
@@ -435,9 +460,25 @@ export default function OpenAiUpstreamSettings({
                                 >
                                     <div className="space-y-1 min-w-0 flex-1">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <span className="font-mono text-sm font-black text-base-content truncate">
-                                                {route.model_id}
-                                            </span>
+                                            <label
+                                                className="inline-flex items-center gap-2 cursor-pointer"
+                                                title="Show this model in client /model picker"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    className="checkbox checkbox-xs rounded-none"
+                                                    checked={isExposed}
+                                                    onChange={(e) => toggleExposed(route.model_id, e.target.checked)}
+                                                />
+                                                <span className="font-mono text-sm font-black text-base-content truncate">
+                                                    {route.model_id}
+                                                </span>
+                                            </label>
+                                            {isExposed && (
+                                                <span className="badge badge-xs badge-success font-mono text-[10px]">
+                                                    /model
+                                                </span>
+                                            )}
                                             {route.upstream_model && route.upstream_model !== route.model_id && (
                                                 <span className="badge badge-xs badge-neutral font-mono text-[10px]">
                                                     mapped &rarr; {route.upstream_model}
@@ -642,6 +683,18 @@ export default function OpenAiUpstreamSettings({
                                 onChange={(e) => setFormTimeout(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                             />
                         </div>
+
+                        <label className="flex items-center gap-2.5 pt-1 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                className="checkbox checkbox-xs rounded-none"
+                                checked={formExposeOnModel}
+                                onChange={(e) => setFormExposeOnModel(e.target.checked)}
+                            />
+                            <span className="text-xs font-mono text-base-content/80">
+                                Show in client <span className="font-bold">/model</span> picker
+                            </span>
+                        </label>
 
                         {/* Live Probe in Modal */}
                         {modalProbeResult && (

@@ -120,6 +120,21 @@ pub async fn handle_generate(
     // 1. 验证方法
     // [NEW] :countTokens 冒号语法，直接代理到上游 v1internal:countTokens
     if method == "countTokens" {
+        // OpenAI 直连模型没有 Google 侧 countTokens，直接用本地估算，避免把 deepseek 等模型发给 v1internal
+        if crate::proxy::openai_upstream::resolve_route(
+            &crate::proxy::openai_upstream::get_config(),
+            &model_name,
+        )
+        .is_some()
+        {
+            let local_tokens = crate::proxy::pipeline::estimate_tokens(&body);
+            return Ok((
+                StatusCode::OK,
+                [("X-Account-Email", "openai-upstream-estimate")],
+                Json(json!({ "totalTokens": local_tokens })),
+            )
+                .into_response());
+        }
         return Ok(execute_count_tokens(
             state,
             headers,

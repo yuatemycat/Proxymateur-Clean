@@ -682,15 +682,13 @@ impl AxumServer {
             // Gemini Protocol (Native)
             .route("/v1beta/models", get(handlers::gemini::handle_list_models))
             // Handle both GET (get info) and POST (generateContent with colon) at the same route
-            // Uses *model wildcard to support model identifiers with slashes (e.g. deepseek-ai/deepseek-v4.1-flash)
+            // Uses *model wildcard to support model identifiers with slashes (e.g. deepseek-ai/deepseek-v4.1-flash).
+            // NOTE: axum 0.7 (matchit 0.7) panics at router build if a `:param/countTokens` route coexists with this
+            // wildcard; `/countTokens` suffix dispatch is handled inside handle_generate instead.
             .route(
                 "/v1beta/models/*model",
                 get(handlers::gemini::handle_get_model).post(handlers::gemini::handle_generate),
             )
-            .route(
-                "/v1beta/models/:model/countTokens",
-                post(handlers::gemini::handle_count_tokens),
-            ) // Specific route priority
             .route(
                 "/v1/models/detect",
                 post(handlers::common::handle_detect_model),

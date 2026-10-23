@@ -85,11 +85,16 @@ static CLAUDE_TO_GEMINI: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|
     m.insert("gemini-3-pro-image", "gemini-3-pro-image");
     m.insert("gemini-3-pro-preview", "gemini-pro-agent");
     m.insert("gemini-omni-1.1-flash", "gemini-3.8-flash-tiered");
-    // ── Google 4.0 / Frontier 灰度与实验前沿模型 (Exp-A/B) ──
+    // ── Google 4.0 / Frontier 灰度与实验前沿模型 (Argon / Exp-A/B) ──
     m.insert("gemini-3.8-flash-exp-a", "gemini-3.8-flash-tiered");
     m.insert("gemini-3.8-exp-a", "gemini-3.8-flash-tiered");
     m.insert("gemini-3.8-flash-exp-b", "gemini-3.8-flash-tiered");
-    // 注：Argon / Carbon 为 Vertex 或前沿专属模型，普通账号池无权限，禁止静默偷换伪装为 tiered / pro-agent
+    m.insert("gemini-4-argon", "gemini-4-argon");
+    m.insert("gemini-4-argon-high", "gemini-4-argon");
+    m.insert("gemini-4-argon-medium", "gemini-4-argon");
+    m.insert("gemini-4-argon-low", "gemini-4-argon");
+    m.insert("gemini-argon", "gemini-4-argon");
+    m.insert("argon", "gemini-4-argon");
 
     // 历史淘汰模型重定向。保留旧版请求兼容性，平滑路由到新版健康模型。gemini-3-flash-agent 是 3.5 Flash high 的真实上游 id，保持透传。
     m.insert("gemini-3-flash", "gemini-3.8-flash-high");
@@ -501,6 +506,30 @@ pub async fn get_all_dynamic_models(
         }
     }
 
+    // 3. 注入基准线核心模型（始终可用，供 /model 选择器展示）
+    if !only_raw_quota_models {
+        for m in [
+            "claude-sonnet-4-6",
+            "claude-sonnet-4-6-thinking",
+            "claude-opus-4-6",
+            "claude-opus-4-6-thinking",
+            "claude-sonnet-5-5",
+            "claude-sonnet-5-5-high",
+            "claude-sonnet-5-5-medium",
+            "claude-sonnet-5-5-low",
+            "claude-opus-5-5",
+            "claude-opus-5-5-high",
+            "claude-opus-5-5-medium",
+            "claude-opus-5-5-low",
+            "gemini-4-argon",
+            "gemini-4-argon-high",
+            "gemini-4-argon-medium",
+            "gemini-4-argon-low",
+        ] {
+            model_ids.insert(m.to_string());
+        }
+    }
+
     // 3.5 当启用 allow_standard_gemini_models 时，注入标准官方 Gemini 系列模型
     if crate::proxy::config::get_allow_standard_gemini_models() {
         for m in [
@@ -816,8 +845,12 @@ fn is_high_tier_flash(lower: &str) -> bool {
 pub fn normalize_to_standard_id(model_name: &str) -> Option<String> {
     let lower = model_name.to_lowercase();
 
-    // 0. 灰度与前沿实验模型统一归入 high-tier pro 深度思考配额池 (Exp-A / Exp-B)
-    if lower.contains("exp-a") || lower.contains("exp-b") {
+    // 0. 灰度与前沿实验模型统一归入 high-tier pro 深度思考配额池 (Exp-A / Exp-B / Argon / Carbon)
+    if lower.contains("exp-a")
+        || lower.contains("exp-b")
+        || lower.contains("argon")
+        || lower.contains("carbon")
+    {
         return Some("gemini-3-pro-high".to_string());
     }
 
