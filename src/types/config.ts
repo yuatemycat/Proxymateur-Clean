@@ -48,9 +48,13 @@ export interface OpenAiRoute {
 export interface OpenAiUpstreamConfig {
     enabled: boolean;
     default_base_url: string;
+    base_url?: string;
     default_api_key: string;
+    api_key?: string;
     default_timeout_secs: number;
     routes: OpenAiRoute[];
+    exposed_models?: string[];
+    model_mapping?: Record<string, string>;
     auto_route_prefix?: string;
 }
 
@@ -252,6 +256,35 @@ export interface AntigravityLabConfig {
     cascade_use_sed_edit_tool: boolean;
     enable_model_capacity_exhausted_retries: boolean;
     enable_mcp_non_blocking_turn_load: boolean;
+
+    // Customizations 2.0
+    enable_plugins: boolean;
+    enable_customization_kind_agent: boolean;
+    enable_customization_kind_skill: boolean;
+    enable_customization_kind_rule: boolean;
+    enable_customization_kind_hooks: boolean;
+    enable_customization_kind_mcp: boolean;
+    enable_hook_status: boolean;
+    deprecate_workflows: boolean;
+
+    // Sidecars
+    jetski_sidecar_declared_permissions: boolean;
+
+    // DeepMind Safety & Guardrails
+    enable_command_assessor: boolean;
+    allow_experimental_monitors: boolean;
+    enable_citc_workspace_hygiene_rule: boolean;
+
+    // Subagent Orchestration & Messaging
+    send_subagent_initial_prompt_as_message: boolean;
+    enable_compact_slash_command: boolean;
+
+    // Engine, Planning & Execution
+    use_component_rewrite: boolean;
+    use_core_direct: boolean;
+    use_slash_plan: boolean;
+    scheduled_tasks_v2: boolean;
+    show_model_selection_change: boolean;
 }
 
 export interface AppConfig {

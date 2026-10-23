@@ -1049,12 +1049,24 @@ impl TokenManager {
         Some(out)
     }
 
-    /// 账号配额列表里原样列出了所请求 Claude 型号的账号（非 Claude 请求返回空）
+    /// 账号配额列表里原样列出了所请求型号的账号（优先调度拥有 5.5 或对应能力的账号）
     fn accounts_listing_exact_claude_model(
         tokens: &[ProxyToken],
         target_model: &str,
     ) -> Vec<ProxyToken> {
         let exact_model = target_model.trim().to_lowercase();
+        if exact_model.contains("argon") {
+            return tokens
+                .iter()
+                .filter(|token| {
+                    token
+                        .model_limits
+                        .keys()
+                        .any(|name| name.contains("5-5") || name.contains("argon"))
+                })
+                .cloned()
+                .collect();
+        }
         if !exact_model.starts_with("claude-") {
             return Vec::new();
         }

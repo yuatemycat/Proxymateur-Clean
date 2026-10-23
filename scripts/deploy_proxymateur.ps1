@@ -27,7 +27,7 @@
 param(
     [switch]$Apply,
     [switch]$Cleanup,
-    [string]$Source = 'E:\02_Projects\Antigravity-Manager\src-tauri\target\release\proxymateur.exe',
+    [string]$Source = 'E:\02_Projects\Proxymateur\src-tauri\target\release\proxymateur.exe',
     [string]$BinDir = 'E:\03_Devops\AntigravityManager\bin',
     [string]$OldInstallDir = 'E:\01_Apps\Installed\Antigravity Tools',
     [string]$NewInstallDir = 'E:\01_Apps\Installed\Proxymateur'

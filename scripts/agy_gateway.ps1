@@ -17,9 +17,11 @@
 
 $ErrorActionPreference = 'SilentlyContinue'
 
-$launcherFlags = @('--gateway-print-models', '--gateway-dry-run')
+$launcherFlags = @('--gateway-print-models', '--gateway-dry-run', '-px', '--px', '-native', '--native')
 $printModels = $args -contains '--gateway-print-models'
 $dryRun      = $args -contains '--gateway-dry-run'
+$proxyMode   = ($args -contains '-px') -or ($args -contains '--px')
+$nativeMode  = ($args -contains '-native') -or ($args -contains '--native')
 
 function Strip-FileBom {
     param([string]$Path)
@@ -255,7 +257,14 @@ Ensure-AntigravitySkills
 
 $proxyCfg = Read-ProxyConfig
 $modeOverride = $env:PROXYMATEUR_AGY_MODE
-$useNative = ($modeOverride -eq 'native') -or (-not $proxyCfg) -or ($proxyCfg.enabled -eq $false) -or ($proxyCfg.allow_standard_gemini_models -eq $true)
+if ($nativeMode -or ($modeOverride -eq 'native')) {
+    $useNative = $true
+} elseif ($proxyMode -or ($modeOverride -eq 'gateway')) {
+    $useNative = $false
+} else {
+    # Default: agy without -px must run natively without proxy
+    $useNative = $true
+}
 
 if (-not $useNative) {
     $port = if ($proxyCfg -and $proxyCfg.port) { $proxyCfg.port } else { 8045 }
@@ -271,19 +280,36 @@ if (-not $useNative) {
         $ids = if ($resp.data) { @($resp.data | ForEach-Object { $_.id }) }
                elseif ($resp.models) { @($resp.models | ForEach-Object { ($_.name -replace '^models/', '') }) }
                else { @() }
-        $isArgonOnly = ($proxyCfg.gateway_routing_mode -eq 'argon_only') -or ($modeOverride -eq 'argon_only')
-        $openaiModelIds = if ($proxyCfg.openai -and $proxyCfg.openai.enabled -and $proxyCfg.openai.routes) {
-            @($proxyCfg.openai.routes | ForEach-Object { $_.model_id })
+        $isArgonOnly = ($proxyCfg -and ($proxyCfg.gateway_routing_mode -eq 'argon_only')) -or ($modeOverride -eq 'argon_only')
+        $openaiModelIds = if (-not $isArgonOnly -and $proxyCfg.openai -and $proxyCfg.openai.enabled -and $proxyCfg.openai.routes) {
+            @($proxyCfg.openai.routes | ForEach-Object {
+                $mid = "$($_.model_id)".Trim()
+                if ($mid) { $mid; "$mid-low"; "$mid-medium"; "$mid-high" }
+            })
         } else { @() }
-        $include = if ($isArgonOnly) { '^gemini-4-argon' } elseif ($env:PROXYMATEUR_AGY_INCLUDE) { $env:PROXYMATEUR_AGY_INCLUDE } else { '^(gemini|claude|gpt|deepseek)-|deepseek-ai/|openai/' }
-        $exclude = if ($env:PROXYMATEUR_AGY_EXCLUDE) { $env:PROXYMATEUR_AGY_EXCLUDE } else { 'image|imagen|embed|tts|audio|veo|live|omni|-exp|tiered|carbon|gemini-argon$|claude-(?:opus|sonnet)-(?:[45])|gpt-oss|\*|\.x(-|$)' }
+        $include = if ($isArgonOnly) { '^gemini-4-argon' } elseif ($env:PROXYMATEUR_AGY_INCLUDE) { $env:PROXYMATEUR_AGY_INCLUDE } else { '^(gemini|claude|gpt|deepseek|nemotron|openai)-' }
+        # Do NOT dismiss Claude 5.5, Argon, or GPT-OSS: allow them through
+        $exclude = if ($env:PROXYMATEUR_AGY_EXCLUDE) { $env:PROXYMATEUR_AGY_EXCLUDE } else { 'image|imagen|embed|tts|audio|veo|live|omni|-exp|tiered|carbon|claude-(?:opus|sonnet)-4-[0-5](?:-|$)|gpt-(?:4|3)|\*|\.x(-|$)' }
         $models = @($ids | Where-Object { $_ -and (($_ -match $include) -or ($openaiModelIds -contains $_)) -and ($_ -notmatch $exclude) } | Sort-Object -Unique)
-        if ($isArgonOnly -and ($models.Count -eq 0)) {
-            $models = @('gemini-4-argon', 'gemini-4-argon-high', 'gemini-4-argon-medium', 'gemini-4-argon-low')
-        } elseif ($models -contains 'gemini-4-argon' -and ($models -notcontains 'gemini-4-argon-high')) {
-            $models += 'gemini-4-argon-high'
-            $models = @($models | Sort-Object -Unique)
+        
+        # Always ensure Gemini 4 Argon family is included
+        foreach ($m in 'gemini-4-argon', 'gemini-4-argon-high', 'gemini-4-argon-medium', 'gemini-4-argon-low') {
+            if ($models -notcontains $m) { $models += $m }
         }
+
+        # Always ensure Claude 5.5 family with low/medium/high effort tiers is included for /model
+        foreach ($m in 'claude-opus-5-5', 'claude-opus-5-5-high', 'claude-opus-5-5-medium', 'claude-opus-5-5-low',
+                       'claude-sonnet-5-5', 'claude-sonnet-5-5-high', 'claude-sonnet-5-5-medium', 'claude-sonnet-5-5-low') {
+            if ($models -notcontains $m) { $models += $m }
+        }
+
+        if ($models -contains 'claude-opus-4-6-thinking' -and ($models -notcontains 'claude-opus-4-6')) {
+            $models += 'claude-opus-4-6'
+        }
+        if ($models -contains 'claude-sonnet-4-6' -and ($models -notcontains 'claude-sonnet-4-6-thinking')) {
+            $models += 'claude-sonnet-4-6-thinking'
+        }
+        $models = @($models | Sort-Object -Unique)
     } catch {
         $models = $null
     }
@@ -296,15 +322,47 @@ if (-not $useNative) {
         $env:AGY_LLM_GATEWAY_MODELS = ($models -join ',')
         if ($key) { $env:AGY_LLM_GATEWAY_API_KEY = $key }
 
+        $flashModel = $models | Where-Object { $_ -match 'flash' -and $_ -match 'high' } | Select-Object -First 1
+        if (-not $flashModel) { $flashModel = $models | Where-Object { $_ -match 'flash' } | Select-Object -First 1 }
+        if (-not $flashModel) { $flashModel = $models[0] }
+
+        $flashLiteModel = $models | Where-Object { $_ -match 'flash-lite' -or $_ -match 'flash_lite' } | Select-Object -First 1
+        if (-not $flashLiteModel) { $flashLiteModel = $flashModel }
+
+        $proModel = $models | Where-Object { ($_ -match 'pro' -or $_ -match 'argon' -or $_ -match 'opus' -or $_ -match 'sonnet') -and $_ -match 'high' } | Select-Object -First 1
+        if (-not $proModel) { $proModel = $models | Where-Object { $_ -match 'pro' -or $_ -match 'argon' -or $_ -match 'opus' -or $_ -match 'sonnet' } | Select-Object -First 1 }
+        if (-not $proModel) { $proModel = $models[0] }
+
+        $env:AGY_LLM_GATEWAY_TIER_FLASH      = $flashModel
+        $env:AGY_LLM_GATEWAY_TIER_FLASH_LITE = $flashLiteModel
+        $env:AGY_LLM_GATEWAY_TIER_PRO        = $proModel
+
+        $env:HTTP_PROXY  = $url
+        $env:HTTPS_PROXY = $url
+        $env:ALL_PROXY   = $url
+
         if ($dryRun) { Write-Host "[agy] mode=gateway  $url  models=$($models.Count)  args=$($agyArgs -join ' ')" -ForegroundColor DarkGray; exit 0 }
         & $agyPath @agyArgs
-        exit $LASTEXITCODE
+        $code = $LASTEXITCODE
+        exit $code
+    } else {
+        Write-Host "[agy] Warning: Proxymateur is not running or unreachable at $url. Falling back to native mode." -ForegroundColor Yellow
     }
 }
 
 # ----------------- Fallback to Native (Zero delay, No warning) -----------------
 Get-ChildItem Env: | Where-Object { $_.Name -like 'AGY_LLM_GATEWAY*' } |
     ForEach-Object { Remove-Item -LiteralPath ("Env:" + $_.Name) -ErrorAction SilentlyContinue }
+
+if ($proxyCfg -and $proxyCfg.upstream_proxy -and $proxyCfg.upstream_proxy.enabled -and $proxyCfg.upstream_proxy.url) {
+    $env:HTTP_PROXY  = $proxyCfg.upstream_proxy.url
+    $env:HTTPS_PROXY = $proxyCfg.upstream_proxy.url
+    $env:ALL_PROXY   = $proxyCfg.upstream_proxy.url
+} else {
+    Remove-Item Env:HTTP_PROXY -ErrorAction SilentlyContinue
+    Remove-Item Env:HTTPS_PROXY -ErrorAction SilentlyContinue
+    Remove-Item Env:ALL_PROXY -ErrorAction SilentlyContinue
+}
 
 if ($printModels) { [Console]::Error.WriteLine('Native mode: models come from Google account.'); exit 0 }
 if ($dryRun) { Write-Host "[agy] mode=native  real=$agyPath  args=$($agyArgs -join ' ')" -ForegroundColor DarkGray; exit 0 }

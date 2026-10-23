@@ -172,6 +172,7 @@ pub struct VertexRoute {
 /// 判断客户端请求的模型是否能在本地账号池中被原生正常处理。
 /// Google 账号池 (Cloud Code) 仅支持 Gemini 3.x 系列、经典 2.5/1.5 别名和 Claude 系列。
 /// 4.x 前沿模型或实验代号 (Argon / Carbon 等) 在普通账号池中不存在，不能回退。
+/// 3.7 及以下的 Flash（gemini-3.1-flash … gemini-3.7-flash 及其档位别名）账号池同样无法服务。
 pub fn is_account_pool_supported_model(requested: &str) -> bool {
     let lower = requested.to_lowercase();
     if lower.contains("argon")
@@ -179,10 +180,29 @@ pub fn is_account_pool_supported_model(requested: &str) -> bool {
         || lower.contains("gemini-4")
         || lower.starts_with("4-")
         || lower.starts_with("4.")
+        || is_legacy_flash(&lower)
     {
         return false;
     }
     true
+}
+
+/// `gemini-3.<minor>-flash` with minor < 8, bare or with a tier suffix.
+/// Flash-Lite and image variants are not included.
+fn is_legacy_flash(lower: &str) -> bool {
+    let Some(rest) = lower.strip_prefix("gemini-3.") else {
+        return false;
+    };
+    let digits_end = rest
+        .find(|c: char| !c.is_ascii_digit())
+        .unwrap_or(rest.len());
+    let Ok(minor) = rest[..digits_end].parse::<u32>() else {
+        return false;
+    };
+    let Some(suffix) = rest[digits_end..].strip_prefix("-flash") else {
+        return false;
+    };
+    minor < 8 && ["", "-high", "-medium", "-low", "-tiered"].contains(&suffix)
 }
 
 /// 默认模式：客户端模型名是默认模型本体或其档位别名
@@ -1085,6 +1105,50 @@ mod tests {
         cfg.model_mode = ModelSelection::Default;
         let default_flash = resolve_route(&cfg, "gemini-3.8-flash").unwrap();
         assert!(default_flash.allow_account_fallback);
+    }
+
+    #[test]
+    fn flash_37_and_below_is_vertex_only() {
+        let mut cfg = config(&[]);
+        cfg.exposed_models = [
+            "gemini-3.7-flash",
+            "gemini-3.7-flash-high",
+            "gemini-3.6-flash-low",
+            "gemini-3.5-flash",
+            "gemini-3.1-flash-tiered",
+            "gemini-3.8-flash",
+            "gemini-3.8-flash-high",
+            "gemini-3.1-flash-lite",
+            "gemini-3.7-flash-image",
+        ]
+        .map(String::from)
+        .to_vec();
+
+        for model in [
+            "gemini-3.7-flash",
+            "Gemini-3.7-Flash-High",
+            "gemini-3.6-flash-low",
+            "gemini-3.5-flash",
+            "gemini-3.1-flash-tiered",
+        ] {
+            assert!(
+                !resolve_route(&cfg, model).unwrap().allow_account_fallback,
+                "{model} must not fall back to the accounts"
+            );
+        }
+        for model in [
+            "gemini-3.8-flash",
+            "gemini-3.8-flash-high",
+            "gemini-3.1-flash-lite",
+            "gemini-3.7-flash-image",
+        ] {
+            assert!(
+                resolve_route(&cfg, model).unwrap().allow_account_fallback,
+                "{model} keeps the account fallback"
+            );
+        }
+        assert!(is_account_pool_supported_model("gemini-3-flash"));
+        assert!(is_account_pool_supported_model("gemini-3.10-flash"));
     }
 
     fn none_rejected(_: &str) -> bool {

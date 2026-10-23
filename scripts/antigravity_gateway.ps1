@@ -103,6 +103,25 @@ if (-not $useNative) {
         $env:AGY_LLM_GATEWAY_MODELS = ($models -join ',')
         if ($key) { $env:AGY_LLM_GATEWAY_API_KEY = $key }
 
+        $flashModel = $models | Where-Object { $_ -match 'flash' -and $_ -match 'high' } | Select-Object -First 1
+        if (-not $flashModel) { $flashModel = $models | Where-Object { $_ -match 'flash' } | Select-Object -First 1 }
+        if (-not $flashModel) { $flashModel = $models[0] }
+
+        $flashLiteModel = $models | Where-Object { $_ -match 'flash-lite' -or $_ -match 'flash_lite' } | Select-Object -First 1
+        if (-not $flashLiteModel) { $flashLiteModel = $flashModel }
+
+        $proModel = $models | Where-Object { ($_ -match 'pro' -or $_ -match 'argon' -or $_ -match 'opus' -or $_ -match 'sonnet') -and $_ -match 'high' } | Select-Object -First 1
+        if (-not $proModel) { $proModel = $models | Where-Object { $_ -match 'pro' -or $_ -match 'argon' -or $_ -match 'opus' -or $_ -match 'sonnet' } | Select-Object -First 1 }
+        if (-not $proModel) { $proModel = $models[0] }
+
+        $env:AGY_LLM_GATEWAY_TIER_FLASH      = $flashModel
+        $env:AGY_LLM_GATEWAY_TIER_FLASH_LITE = $flashLiteModel
+        $env:AGY_LLM_GATEWAY_TIER_PRO        = $proModel
+
+        $env:HTTP_PROXY  = $url
+        $env:HTTPS_PROXY = $url
+        $env:ALL_PROXY   = $url
+
         if ($dryRun) { Write-Host "[antigravity] mode=gateway  $url  models=$($models.Count)  args=$($appArgs -join ' ')" -ForegroundColor DarkGray; exit 0 }
         
         if ($appArgs -and $appArgs.Count -gt 0) {
@@ -117,6 +136,16 @@ if (-not $useNative) {
 # ----------------- Fallback to Native (Zero delay, No warning) -----------------
 Get-ChildItem Env: | Where-Object { $_.Name -like 'AGY_LLM_GATEWAY*' } |
     ForEach-Object { Remove-Item -LiteralPath ("Env:" + $_.Name) -ErrorAction SilentlyContinue }
+
+if ($proxyCfg -and $proxyCfg.upstream_proxy -and $proxyCfg.upstream_proxy.enabled -and $proxyCfg.upstream_proxy.url) {
+    $env:HTTP_PROXY  = $proxyCfg.upstream_proxy.url
+    $env:HTTPS_PROXY = $proxyCfg.upstream_proxy.url
+    $env:ALL_PROXY   = $proxyCfg.upstream_proxy.url
+} else {
+    Remove-Item Env:HTTP_PROXY -ErrorAction SilentlyContinue
+    Remove-Item Env:HTTPS_PROXY -ErrorAction SilentlyContinue
+    Remove-Item Env:ALL_PROXY -ErrorAction SilentlyContinue
+}
 
 if ($printModels) { [Console]::Error.WriteLine('Native mode: models come from Google account.'); exit 0 }
 if ($dryRun) { Write-Host "[antigravity] mode=native  real=$exePath  args=$($appArgs -join ' ')" -ForegroundColor DarkGray; exit 0 }
