@@ -318,7 +318,7 @@ The following untruncated JSONL records are extracted directly from `~/.gemini/a
 // Conversation: 30ae7968-2823-4d1f-ba72-f797b9509d7c | Step: 0 & Conv: 6d7dd46e-4f27-4f19-93ec-271f39f3af0e | Step: 63 & Conv: 19f27cba-a2d6-44ba-a461-04b13d968dc7 | Step: 843
 {"step_index": 0, "type": "USER_INPUT", "content": "/generative_ui Hi"}
 {"step_index": 63, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "read_url_content", "args": {"Url": "https://aistudio.google.com/learn/gemini-4-argon-developer-guide", "toolAction": "Reading developer guide", "toolSummary": "Read Gemini 4 Argon dev guide"}}]}
-{"step_index": 843, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "run_command", "args": {"CommandLine": "python -c \"import json; p=r'C:\\Users\\<user>\\.gemini\\antigravity-cli\\settings.json'; print(len(json.load(open(p)).get('experiments',{})))\"", "Cwd": "~/workspace/Antigravity-Manager", "WaitMsBeforeAsync": 5000, "toolSummary": "Verify experiments in settings.json"}}]}
+{"step_index": 843, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "run_command", "args": {"CommandLine": "python -c \"import json; p=r'~\\.gemini\\antigravity-cli\\settings.json'; print(len(json.load(open(p)).get('experiments',{})))\"", "Cwd": "~/workspace/Antigravity-Manager", "WaitMsBeforeAsync": 5000, "toolSummary": "Verify experiments in settings.json"}}]}
 
 // [Group 6 & Group 7: Scheduled Tasks v2 + Cortex Pre-Restructure Snapshot] (scheduled-tasks-v2 @ 0xa5b578f + cortex-snapshot-recording @ 0x3a88e95 / 0x4224882)
 // Conversation: 00fad603-48ba-4eca-bf20-d0df14bc2975 | Step: 242 & Conv: 0088482d-189d-4238-a7a5-aacefde43748 | Step: 69
