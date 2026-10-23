@@ -4,18 +4,20 @@ Comprehensive Benchmark & Forensic Verification Suite for Antigravity Lab (54 Fl
 
 Validates the 54 reverse-engineered flags across 7 paired functional clusters:
 1. Layer 1 (Binary ABI & PE Forensics): Verifies exact raw file offsets of all 54 flags
-   inside agy.exe, plus the 12 native 104B/144B slash command structs and the 11
-   patched 56B GenericCommand structs in the .proxcv section (VA 0x14e574000).
+   inside agy.exe, plus the 12 native 104B/144B slash command structs (@ 0xbe58cf8) and
+   the 11 patched 56B GenericCommand structs in the .proxcv section (code VA 0x14e574000,
+   data table VA 0x14e574400..0x14e574630).
 2. Layer 2 (CLI Gateway & Settings Sync): Benchmarks bidirectional snake_case <-> kebab-case
    key translation throughput, validates all 54 flags against the Sync-CliExperimentFlags
    regex in scripts/agy_gateway.ps1, and verifies live persistence parity between
    ~/.gemini/antigravity-cli/settings.json and ~/.proxymateur/gui_config.json.
 3. Layer 3 (Empirical Transcript Telemetry & Workflow Comparison): Parses all local
-   conversation transcripts (transcript.jsonl + targeted untruncated args from
-   transcript_full.jsonl) to measure real tool invocations, subagent model inheritance,
-   and head-to-head metrics comparing Antigravity Lab workflows (/swarm, /owl, /battle,
+   conversation transcripts (matching transcript_full.jsonl by step_index with graceful
+   fallback to transcript.jsonl) to measure real tool invocations, subagent model
+   inheritance & TypeNames across both batch and single-subagent calls, and turn-windowed
+   head-to-head metrics comparing Antigravity Lab workflows (/swarm, /owl, /battle,
    /benchmark, /compact, /generative_ui) against native CLI commands (/boost,
-   /teamwork-preview, /teamwork, /plan, /goal, /grill-me).
+   /teamwork-preview, /teamwork, /plan, /goal, /learn, /btw).
 """
 
 import json
@@ -135,10 +137,47 @@ TARGET_RICH_TOOLS = {
     "ask_question",
 }
 
+# Strict boundary: slash command must be followed by whitespace, end-of-string, or punctuation (never '-')
 CMD_REGEX = re.compile(
-    r"(?:^|\s)(/(?:swarm|owl|battle|benchmark|compact|generative_ui|teamwork-previews|teamwork-preview|teamwork|boost|plan|goal|grill-me|deepagent|review-agent|btw|queue|plugin|hooks|diff|effort))\b",
+    r"(?:^|[\s\"'`(])(/(?:swarm|owl|battle|benchmark|compact|generative_ui|teamwork-previews|teamwork-preview|teamwork|boost|plan|goal|grill-me|deepagent|review-agent|btw|queue|plugin|hooks|diff|effort|learn))(?=$|[\s\"'`),.!?;:])",
     re.IGNORECASE,
 )
+USER_REQ_REGEX = re.compile(r"<USER_REQUEST>(.*?)</USER_REQUEST>", re.DOTALL)
+SLASH_META_REGEX = re.compile(r"(/(?:[a-z0-9_-]+))\s+is a \[(Slash Command|Skill)\]", re.IGNORECASE)
+
+NATIVE_CMD_TABLE_RAW = 0xBE58CF8
+NATIVE_CMD_STRIDE = 0x68
+NATIVE_CMD_COUNT = 12
+PROXCV_CMD_COUNT = 11
+PROXCV_ENTRY_SIZE = 56
+PROXCV_DATA_OFFSET = 0x400
+
+
+def _parse_pe_sections(data: bytes):
+    if len(data) < 0x100 or data[:2] != b"MZ":
+        return 0, []
+    e_lfanew = struct.unpack_from("<I", data, 0x3C)[0]
+    if e_lfanew + 24 > len(data) or data[e_lfanew:e_lfanew + 4] != b"PE\0\0":
+        return 0, []
+    num_sections = struct.unpack_from("<H", data, e_lfanew + 6)[0]
+    opt_hdr_size = struct.unpack_from("<H", data, e_lfanew + 20)[0]
+    opt_hdr_offset = e_lfanew + 24
+    image_base = struct.unpack_from("<Q", data, opt_hdr_offset + 24)[0]
+    sec_tbl_offset = opt_hdr_offset + opt_hdr_size
+
+    sections = []
+    for i in range(num_sections):
+        sec = data[sec_tbl_offset + i * 40 : sec_tbl_offset + (i + 1) * 40]
+        name = sec[:8].rstrip(b"\x00").decode("latin-1", errors="ignore")
+        vsize, vaddr, raw_size, raw_ptr = struct.unpack_from("<IIII", sec, 8)
+        sections.append({
+            "name": name,
+            "va": image_base + vaddr,
+            "vsize": vsize,
+            "raw_ptr": raw_ptr,
+            "raw_size": raw_size,
+        })
+    return image_base, sections
 
 
 def benchmark_binary_forensics():
@@ -150,6 +189,22 @@ def benchmark_binary_forensics():
 
     t0 = time.perf_counter()
     data = agy_path.read_bytes()
+    image_base, sections = _parse_pe_sections(data)
+
+    def va_to_raw(va: int):
+        for s in sections:
+            if s["va"] <= va < s["va"] + s["vsize"]:
+                return s["raw_ptr"] + (va - s["va"])
+        return None
+
+    def read_go_str(va: int, length: int) -> str:
+        if not va or length <= 0 or length > 8192:
+            return ""
+        r = va_to_raw(va)
+        if r is None or r + length > len(data):
+            return ""
+        return data[r : r + length].decode("utf-8", errors="replace")
+
     flag_offsets = {}
     verified_count = 0
 
@@ -170,16 +225,64 @@ def benchmark_binary_forensics():
                 "raw_snake": f"0x{off_snake:x}" if off_snake != -1 else None,
             }
 
+    # Verify the 12 native 104-byte slash command descriptors at 0xbe58cf8
+    native_commands = []
+    if NATIVE_CMD_TABLE_RAW + NATIVE_CMD_COUNT * NATIVE_CMD_STRIDE <= len(data):
+        for i in range(NATIVE_CMD_COUNT):
+            off = NATIVE_CMD_TABLE_RAW + i * NATIVE_CMD_STRIDE
+            s_ptr, s_len, d_ptr, d_len = struct.unpack_from("<QQQQ", data, off)
+            name = read_go_str(s_ptr, s_len)
+            desc = read_go_str(d_ptr, d_len)
+            if name:
+                native_commands.append({
+                    "index": i,
+                    "raw_offset": f"0x{off:x}",
+                    "name": name,
+                    "description": desc,
+                })
+
+    # Verify the 11 patched 56-byte GenericCommand structs in .proxcv
+    proxcv_sec = next((s for s in sections if s["name"] == ".proxcv"), None)
+    proxcv_commands = []
+    if proxcv_sec is not None:
+        data_raw = proxcv_sec["raw_ptr"] + PROXCV_DATA_OFFSET
+        data_va = proxcv_sec["va"] + PROXCV_DATA_OFFSET
+        meta_raw = data_raw + PROXCV_CMD_COUNT * PROXCV_ENTRY_SIZE
+        str_raw = (meta_raw + PROXCV_CMD_COUNT * 8 + 15) & ~15
+        if str_raw < len(data):
+            for i in range(PROXCV_CMD_COUNT):
+                noff, nlen, doff, dlen = struct.unpack_from("<HHHH", data, meta_raw + i * 8)
+                name = data[str_raw + noff : str_raw + noff + nlen].decode("utf-8", errors="replace")
+                desc = data[str_raw + doff : str_raw + doff + dlen].decode("utf-8", errors="replace")
+                proxcv_commands.append({
+                    "index": i,
+                    "slot_va": f"0x{data_va + i * PROXCV_ENTRY_SIZE:x}",
+                    "slot_raw": f"0x{data_raw + i * PROXCV_ENTRY_SIZE:x}",
+                    "name": name,
+                    "description": desc,
+                })
+
     proxcv_off = data.find(b"PROX_CMD_V1")
     elapsed = time.perf_counter() - t0
-    print(f"Scanned agy.exe ({len(data):,} bytes) in {elapsed:.2f}s")
+    print(f"Scanned agy.exe ({len(data):,} bytes, ImageBase=0x{image_base:x}) in {elapsed:.2f}s")
     print(f"Verified Binary Flag Presence: {verified_count}/54 flags (100.0%)")
+    print(f"Verified Native Slash Command Descriptors (@ 0x{NATIVE_CMD_TABLE_RAW:x}): {len(native_commands)}/{NATIVE_CMD_COUNT}")
+    print(f"Verified Patched .proxcv GenericCommand Structs (@ 0x14e574400): {len(proxcv_commands)}/{PROXCV_CMD_COUNT}")
     print(f"Patched .proxcv Command Cave Marker (PROX_CMD_V1): {'0x' + format(proxcv_off, 'x') if proxcv_off != -1 else 'NOT FOUND'}")
 
     return {
         "binary_exists": True,
         "binary_size_bytes": len(data),
+        "image_base": f"0x{image_base:x}",
         "verified_flags_in_binary": verified_count,
+        "native_commands_verified": len(native_commands),
+        "native_commands": native_commands,
+        "proxcv_commands_verified": len(proxcv_commands),
+        "proxcv_code_va": f"0x{proxcv_sec['va']:x}" if proxcv_sec else None,
+        "proxcv_code_raw": f"0x{proxcv_sec['raw_ptr']:x}" if proxcv_sec else None,
+        "proxcv_data_va": f"0x{proxcv_sec['va'] + PROXCV_DATA_OFFSET:x}" if proxcv_sec else None,
+        "proxcv_data_raw": f"0x{proxcv_sec['raw_ptr'] + PROXCV_DATA_OFFSET:x}" if proxcv_sec else None,
+        "proxcv_commands": proxcv_commands,
         "proxcv_marker_offset": f"0x{proxcv_off:x}" if proxcv_off != -1 else None,
         "scan_seconds": round(elapsed, 4),
         "flag_offsets": flag_offsets,
@@ -253,6 +356,35 @@ def benchmark_flag_matrix_and_sync():
     }
 
 
+def _extract_turn_commands(content: str):
+    """
+    Extract canonical slash commands invoked in a single USER_INPUT turn without
+    double-counting when agy.exe echoes '/cmd is a [Slash Command|Skill]' in <ADDITIONAL_METADATA>.
+    """
+    m_req = USER_REQ_REGEX.search(content)
+    req_text = (m_req.group(1) if m_req else content).strip()
+
+    meta_cmds = set()
+    for m_meta, _kind in SLASH_META_REGEX.findall(content):
+        c = m_meta.lower()
+        if c in ("/teamwork-preview", "/teamwork-previews"):
+            c = "/teamwork-preview"
+        if CMD_REGEX.match(c):
+            meta_cmds.add(c)
+
+    req_cmds = set()
+    for m in CMD_REGEX.findall(req_text):
+        c = m.lower()
+        if c in ("/teamwork-preview", "/teamwork-previews"):
+            c = "/teamwork-preview"
+        req_cmds.add(c)
+
+    if "initiate battle mode:" in req_text.lower():
+        req_cmds.add("/battle")
+
+    return req_cmds | meta_cmds
+
+
 def benchmark_transcripts_and_workflows():
     print("\n=== 3. Layer 3: Real Transcript Telemetry & Native vs. Lab Workflow Comparison ===")
     brain_dir = Path(os.path.expanduser("~/.gemini/antigravity-cli/brain"))
@@ -266,14 +398,17 @@ def benchmark_transcripts_and_workflows():
     cmd_stats = defaultdict(lambda: {
         "invocations": 0,
         "sessions": set(),
-        "total_steps": 0,
-        "total_tool_calls": 0,
+        "window_steps": 0,
+        "window_tool_calls": 0,
+        "session_steps": 0,
+        "session_tool_calls": 0,
         "invoke_subagent_calls": 0,
         "spawned_subagents": 0,
         "manage_subagents_calls": 0,
         "define_subagent_calls": 0,
         "send_message_calls": 0,
         "ask_question_calls": 0,
+        "ask_question_invocations": 0,
         "schedule_calls": 0,
         "run_command_calls": 0,
         "subagent_models": defaultdict(int),
@@ -293,171 +428,222 @@ def benchmark_transcripts_and_workflows():
         conv_id = tf.parent.parent.parent.name
         full_tf = tf.parent / "transcript_full.jsonl"
         try:
-            lines = tf.read_text(encoding="utf-8", errors="ignore").splitlines()
+            short_lines = tf.read_text(encoding="utf-8", errors="ignore").splitlines()
         except Exception:
             continue
 
-        total_lines += len(lines)
-        session_cmds = set()
-        session_tools = defaultdict(int)
-        rich_line_numbers = set()
+        total_lines += len(short_lines)
 
-        for line_no, line in enumerate(lines):
+        # Parse short transcript and identify step_index values needing untruncated args
+        parsed_steps = []
+        rich_step_indices = set()
+        for idx, line in enumerate(short_lines):
             try:
                 obj = json.loads(line)
             except Exception:
                 continue
+            step_idx = obj.get("step_index", idx)
+            parsed_steps.append((step_idx, obj))
+            if obj.get("type") == "PLANNER_RESPONSE":
+                for tc in obj.get("tool_calls", []):
+                    if isinstance(tc, dict) and tc.get("name", "") in TARGET_RICH_TOOLS:
+                        rich_step_indices.add(step_idx)
 
+        # Resolve untruncated tool_calls from transcript_full.jsonl keyed by step_index
+        full_step_map = {}
+        if rich_step_indices and full_tf.exists():
+            try:
+                with open(full_tf, "r", encoding="utf-8", errors="ignore") as ff:
+                    for idx, fline in enumerate(ff):
+                        try:
+                            fobj = json.loads(fline)
+                        except Exception:
+                            continue
+                        f_step = fobj.get("step_index", idx)
+                        if f_step in rich_step_indices and fobj.get("type") == "PLANNER_RESPONSE":
+                            full_step_map[f_step] = fobj
+            except Exception:
+                pass
+
+        # Detect native /boost DeepCoderCoordinator pipeline sessions (which receive initial prompt via SYSTEM_MESSAGE)
+        is_boost_coord = any(
+            "DeepCoderWorkerL0" in l or "You are a pipeline coordinator" in l
+            for l in short_lines[:5]
+        )
+        active_cmds = set()
+        if is_boost_coord:
+            active_cmds = {"/boost"}
+            cmd_stats["/boost"]["invocations"] += 1
+            cmd_stats["/boost"]["sessions"].add(conv_id)
+
+        session_cmds = set(active_cmds)
+        session_tool_total = 0
+        window_had_ask_q = set()
+
+        for step_idx, obj in parsed_steps:
             t_type = obj.get("type", "")
             if t_type == "USER_INPUT":
-                content = str(obj.get("content", "")).strip()
-                for m in CMD_REGEX.findall(content):
-                    cmd = m.lower()
-                    if cmd in ("/teamwork-preview", "/teamwork-previews"):
-                        cmd = "/teamwork-preview"
-                    cmd_stats[cmd]["invocations"] += 1
-                    session_cmds.add(cmd)
+                content = str(obj.get("content", ""))
+                turn_cmds = _extract_turn_commands(content)
+                if turn_cmds:
+                    active_cmds = turn_cmds
+                    window_had_ask_q = set()
+                    for cmd in turn_cmds:
+                        cmd_stats[cmd]["invocations"] += 1
+                        cmd_stats[cmd]["sessions"].add(conv_id)
+                        session_cmds.add(cmd)
 
-            elif t_type == "PLANNER_RESPONSE":
-                for tc in obj.get("tool_calls", []):
+            for cmd in active_cmds:
+                cmd_stats[cmd]["window_steps"] += 1
+
+            if t_type == "PLANNER_RESPONSE":
+                rich_obj = full_step_map.get(step_idx, obj)
+                for tc in rich_obj.get("tool_calls", []):
                     if not isinstance(tc, dict):
                         continue
                     t_name = tc.get("name", "")
                     if not t_name:
                         continue
                     total_tool_calls[t_name] += 1
-                    session_tools[t_name] += 1
-                    session_tools["_total"] += 1
-                    if t_name in TARGET_RICH_TOOLS:
-                        rich_line_numbers.add(line_no)
+                    session_tool_total += 1
+                    args = tc.get("args") or tc.get("arguments") or {}
+                    if not isinstance(args, dict):
+                        args = {}
 
-        # Resolve untruncated args from transcript_full.jsonl only for rich_line_numbers
-        session_spawned = 0
-        session_models = defaultdict(int)
-        session_typenames = defaultdict(int)
+                    spawned_here = 0
+                    models_here = defaultdict(int)
+                    types_here = defaultdict(int)
 
-        if rich_line_numbers and full_tf.exists():
-            try:
-                with open(full_tf, "r", encoding="utf-8", errors="ignore") as ff:
-                    for line_no, fline in enumerate(ff):
-                        if line_no not in rich_line_numbers:
-                            continue
-                        try:
-                            fobj = json.loads(fline)
-                        except Exception:
-                            continue
-                        step_idx = fobj.get("step_index", line_no)
-                        for tc in fobj.get("tool_calls", []):
-                            if not isinstance(tc, dict):
-                                continue
-                            t_name = tc.get("name", "")
-                            args = tc.get("args") or tc.get("arguments") or {}
-                            if not isinstance(args, dict):
-                                args = {}
-
-                            if t_name == "invoke_subagent":
-                                total_invoke_calls += 1
-                                subs = args.get("Subagents", [])
-                                if isinstance(subs, list) and subs:
-                                    for s in subs:
-                                        if isinstance(s, dict):
-                                            total_spawned_subagents += 1
-                                            session_spawned += 1
-                                            m = str(s.get("Model", "inherit")).strip() or "inherit"
-                                            tn = str(s.get("TypeName", "self")).strip() or "self"
-                                            global_subagent_models[m] += 1
-                                            global_subagent_typenames[tn] += 1
-                                            session_models[m] += 1
-                                            session_typenames[tn] += 1
-                                else:
+                    if t_name == "invoke_subagent":
+                        total_invoke_calls += 1
+                        subs = args.get("Subagents", [])
+                        if isinstance(subs, list) and subs:
+                            for s in subs:
+                                if isinstance(s, dict):
                                     total_spawned_subagents += 1
-                                    session_spawned += 1
-                                    m = str(args.get("Model", "inherit")).strip() or "inherit"
+                                    spawned_here += 1
+                                    m = str(s.get("Model", "inherit")).strip() or "inherit"
+                                    tn = str(s.get("TypeName", "self")).strip() or "self"
                                     global_subagent_models[m] += 1
-                                    session_models[m] += 1
+                                    global_subagent_typenames[tn] += 1
+                                    models_here[m] += 1
+                                    types_here[tn] += 1
+                        else:
+                            total_spawned_subagents += 1
+                            spawned_here += 1
+                            m = str(args.get("Model", "inherit")).strip() or "inherit"
+                            tn = str(args.get("TypeName", "self")).strip() or "self"
+                            global_subagent_models[m] += 1
+                            global_subagent_typenames[tn] += 1
+                            models_here[m] += 1
+                            types_here[tn] += 1
 
-                                if len(authentic_proofs["invoke_subagent"]) < 5:
-                                    authentic_proofs["invoke_subagent"].append({
-                                        "conv_id": conv_id,
-                                        "step_index": step_idx,
-                                        "subagent_count": len(subs) if isinstance(subs, list) else 1,
-                                        "roles": [s.get("Role") for s in subs if isinstance(s, dict)],
-                                        "models": [s.get("Model", "inherit") for s in subs if isinstance(s, dict)],
-                                    })
+                        if len(authentic_proofs["invoke_subagent"]) < 5:
+                            authentic_proofs["invoke_subagent"].append({
+                                "conv_id": conv_id,
+                                "step_index": step_idx,
+                                "subagent_count": spawned_here,
+                                "roles": (
+                                    [s.get("Role") for s in subs if isinstance(s, dict)]
+                                    if isinstance(subs, list) and subs
+                                    else [args.get("Role")]
+                                ),
+                                "models": dict(models_here),
+                                "typenames": dict(types_here),
+                            })
 
-                            elif t_name == "call_mcp_tool":
-                                srv = str(args.get("ServerName", "unknown"))
-                                tool_n = str(args.get("ToolName", "unknown"))
-                                mcp_tool_counts[f"{srv}/{tool_n}"] += 1
+                    elif t_name == "call_mcp_tool":
+                        srv = str(args.get("ServerName", "unknown"))
+                        tool_n = str(args.get("ToolName", "unknown"))
+                        mcp_tool_counts[f"{srv}/{tool_n}"] += 1
 
-                            elif t_name == "define_subagent":
-                                if len(authentic_proofs["define_subagent"]) < 5:
-                                    authentic_proofs["define_subagent"].append({
-                                        "conv_id": conv_id,
-                                        "step_index": step_idx,
-                                        "name": args.get("Name") or args.get("name"),
-                                        "enable_mcp": args.get("EnableMCPTools", args.get("enable_mcp_tools")),
-                                    })
+                    elif t_name == "define_subagent":
+                        if len(authentic_proofs["define_subagent"]) < 5:
+                            authentic_proofs["define_subagent"].append({
+                                "conv_id": conv_id,
+                                "step_index": step_idx,
+                                "name": args.get("Name") or args.get("name"),
+                                "enable_mcp": args.get("EnableMCPTools", args.get("enable_mcp_tools")),
+                            })
 
-                            elif t_name == "schedule":
-                                if len(authentic_proofs["schedule"]) < 5:
-                                    authentic_proofs["schedule"].append({
-                                        "conv_id": conv_id,
-                                        "step_index": step_idx,
-                                        "duration": args.get("DurationSeconds"),
-                                        "condition": args.get("TimerCondition"),
-                                    })
-            except Exception:
-                pass
+                    elif t_name == "schedule":
+                        if len(authentic_proofs["schedule"]) < 5:
+                            authentic_proofs["schedule"].append({
+                                "conv_id": conv_id,
+                                "step_index": step_idx,
+                                "duration": args.get("DurationSeconds"),
+                                "condition": args.get("TimerCondition"),
+                            })
+
+                    for cmd in active_cmds:
+                        cs = cmd_stats[cmd]
+                        cs["window_tool_calls"] += 1
+                        if t_name == "invoke_subagent":
+                            cs["invoke_subagent_calls"] += 1
+                            cs["spawned_subagents"] += spawned_here
+                            for m, cnt in models_here.items():
+                                cs["subagent_models"][m] += cnt
+                            for tn, cnt in types_here.items():
+                                cs["subagent_typenames"][tn] += cnt
+                        elif t_name == "manage_subagents":
+                            cs["manage_subagents_calls"] += 1
+                        elif t_name == "define_subagent":
+                            cs["define_subagent_calls"] += 1
+                        elif t_name == "send_message":
+                            cs["send_message_calls"] += 1
+                        elif t_name == "ask_question":
+                            cs["ask_question_calls"] += 1
+                            if cmd not in window_had_ask_q:
+                                cs["ask_question_invocations"] += 1
+                                window_had_ask_q.add(cmd)
+                        elif t_name == "schedule":
+                            cs["schedule_calls"] += 1
+                        elif t_name == "run_command":
+                            cs["run_command_calls"] += 1
 
         for cmd in session_cmds:
-            cs = cmd_stats[cmd]
-            cs["sessions"].add(conv_id)
-            cs["total_steps"] += len(lines)
-            cs["total_tool_calls"] += session_tools["_total"]
-            cs["invoke_subagent_calls"] += session_tools["invoke_subagent"]
-            cs["spawned_subagents"] += session_spawned
-            cs["manage_subagents_calls"] += session_tools["manage_subagents"]
-            cs["define_subagent_calls"] += session_tools["define_subagent"]
-            cs["send_message_calls"] += session_tools["send_message"]
-            cs["ask_question_calls"] += session_tools["ask_question"]
-            cs["schedule_calls"] += session_tools["schedule"]
-            cs["run_command_calls"] += session_tools["run_command"]
-            for m, cnt in session_models.items():
-                cs["subagent_models"][m] += cnt
-            for tn, cnt in session_typenames.items():
-                cs["subagent_typenames"][tn] += cnt
+            cmd_stats[cmd]["session_steps"] += len(short_lines)
+            cmd_stats[cmd]["session_tool_calls"] += session_tool_total
 
     elapsed = time.perf_counter() - t0
     lines_sec = total_lines / max(elapsed, 1e-9)
 
     print(f"Scanned {len(transcript_files)} transcripts ({total_lines:,} lines) in {elapsed:.2f}s ({lines_sec:,.0f} lines/sec)")
-    print(f"Subagent Spawns: {total_invoke_calls} batch calls -> {total_spawned_subagents} spawned subagents")
-    print(f"Subagent Model Inheritance: {dict(global_subagent_models)}")
-    print(f"Subagent TypeNames: {dict(global_subagent_typenames)}")
+    print(f"Subagent Spawns: {total_invoke_calls} invoke_subagent calls -> {total_spawned_subagents} spawned subagents")
+    print(f"Subagent Model Inheritance: {dict(global_subagent_models)} (sum={sum(global_subagent_models.values())})")
+    print(f"Subagent TypeNames: {dict(global_subagent_typenames)} (sum={sum(global_subagent_typenames.values())})")
 
     workflow_table = {}
-    print("\n--- Head-to-Head Workflow Telemetry (Antigravity Lab vs. Native CLI) ---")
-    header = f"{'Command':18s} | {'Inv':>4s} | {'Sess':>4s} | {'AvgSteps':>8s} | {'AvgTools':>8s} | {'SubCalls':>8s} | {'Spawned':>7s} | {'ManageSub':>9s} | {'AskQ':>4s}"
+    print("\n--- Head-to-Head Workflow Telemetry (Turn-Windowed & Deduplicated) ---")
+    header = (
+        f"{'Command':18s} | {'Inv':>4s} | {'Sess':>4s} | {'WinSteps':>8s} | {'WinTools':>8s} | "
+        f"{'SubCalls':>8s} | {'Spawned':>7s} | {'ManageSub':>9s} | {'DefSub':>6s} | {'AskQ':>4s}"
+    )
     print(header)
     print("-" * len(header))
     for cmd in sorted(cmd_stats.keys(), key=lambda k: -cmd_stats[k]["invocations"]):
         c = cmd_stats[cmd]
+        n_inv = max(c["invocations"], 1)
         n_sess = max(len(c["sessions"]), 1)
         row = {
             "invocations": c["invocations"],
             "unique_sessions": len(c["sessions"]),
-            "total_steps": c["total_steps"],
-            "avg_steps_per_session": round(c["total_steps"] / n_sess, 1),
-            "total_tool_calls": c["total_tool_calls"],
-            "avg_tools_per_session": round(c["total_tool_calls"] / n_sess, 1),
+            "window_steps": c["window_steps"],
+            "avg_steps_per_invocation": round(c["window_steps"] / n_inv, 1),
+            "window_tool_calls": c["window_tool_calls"],
+            "avg_tools_per_invocation": round(c["window_tool_calls"] / n_inv, 1),
+            "session_steps": c["session_steps"],
+            "avg_steps_per_session": round(c["session_steps"] / n_sess, 1),
+            "session_tool_calls": c["session_tool_calls"],
+            "avg_tools_per_session": round(c["session_tool_calls"] / n_sess, 1),
             "invoke_subagent_calls": c["invoke_subagent_calls"],
             "spawned_subagents": c["spawned_subagents"],
             "manage_subagents_calls": c["manage_subagents_calls"],
             "define_subagent_calls": c["define_subagent_calls"],
             "send_message_calls": c["send_message_calls"],
             "ask_question_calls": c["ask_question_calls"],
-            "ask_question_rate_pct": round(100.0 * c["ask_question_calls"] / n_sess, 1),
+            "ask_question_invocations": c["ask_question_invocations"],
+            "ask_question_rate_pct": round(100.0 * c["ask_question_invocations"] / n_inv, 1),
             "schedule_calls": c["schedule_calls"],
             "subagent_models": dict(c["subagent_models"]),
             "subagent_typenames": dict(c["subagent_typenames"]),
@@ -465,9 +651,10 @@ def benchmark_transcripts_and_workflows():
         workflow_table[cmd] = row
         print(
             f"{cmd:18s} | {row['invocations']:4d} | {row['unique_sessions']:4d} | "
-            f"{row['avg_steps_per_session']:8.1f} | {row['avg_tools_per_session']:8.1f} | "
+            f"{row['avg_steps_per_invocation']:8.1f} | {row['avg_tools_per_invocation']:8.1f} | "
             f"{row['invoke_subagent_calls']:8d} | {row['spawned_subagents']:7d} | "
-            f"{row['manage_subagents_calls']:9d} | {row['ask_question_calls']:4d}"
+            f"{row['manage_subagents_calls']:9d} | {row['define_subagent_calls']:6d} | "
+            f"{row['ask_question_calls']:4d}"
         )
 
     return {
