@@ -646,8 +646,20 @@ impl TokenManager {
         let subscription_tier = account
             .get("quota")
             .and_then(|q| q.get("subscription_tier"))
+            .or_else(|| account.get("subscription_tier"))
+            .or_else(|| account.get("tier"))
             .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+            .map(|s| {
+                let norm = crate::models::quota::normalize_subscription_tier(s);
+                if crate::models::quota::is_known_tier(&norm) {
+                    norm
+                } else {
+                    s.to_string()
+                }
+            });
+
+        let is_pro_or_ultra = matches!(subscription_tier.as_deref(), Some("PRO") | Some("ULTRA"));
+        let is_ultra = matches!(subscription_tier.as_deref(), Some("ULTRA"));
 
         // [FIX #563] 提取最大剩余配额百分比用于优先级排序 (Option<i32> now)
         let remaining_quota = account
@@ -690,6 +702,17 @@ impl TokenManager {
                     model.get("name").and_then(|v| v.as_str()),
                     model.get("percentage").and_then(|v| v.as_i64()),
                 ) {
+                    let lower_name = name.to_lowercase();
+                    if lower_name.starts_with("claude-opus") && !is_ultra {
+                        continue;
+                    }
+                    if lower_name.starts_with("claude-sonnet") && !is_pro_or_ultra {
+                        continue;
+                    }
+                    if lower_name.starts_with("claude") && !is_pro_or_ultra {
+                        continue;
+                    }
+
                     // Normalize name to standard ID
                     let standard_id =
                         crate::proxy::common::model_mapping::normalize_to_standard_id(name)
@@ -701,6 +724,16 @@ impl TokenManager {
                     model.get("name").and_then(|v| v.as_str()),
                     model.get("max_output_tokens").and_then(|v| v.as_u64()),
                 ) {
+                    let lower_name = name.to_lowercase();
+                    if lower_name.starts_with("claude-opus") && !is_ultra {
+                        continue;
+                    }
+                    if lower_name.starts_with("claude-sonnet") && !is_pro_or_ultra {
+                        continue;
+                    }
+                    if lower_name.starts_with("claude") && !is_pro_or_ultra {
+                        continue;
+                    }
                     model_limits.insert(name.to_string(), limit);
                 }
             }
@@ -1024,14 +1057,34 @@ impl TokenManager {
             return None;
         }
 
+        let raw_tier = account
+            .get("quota")
+            .and_then(|q| q.get("subscription_tier"))
+            .or_else(|| account.get("subscription_tier"))
+            .or_else(|| account.get("tier"))
+            .and_then(|v| v.as_str());
+        let norm_tier = raw_tier.map(crate::models::quota::normalize_subscription_tier);
+        let is_pro_or_ultra = matches!(norm_tier.as_deref(), Some("PRO") | Some("ULTRA"));
+        let is_ultra = matches!(norm_tier.as_deref(), Some("ULTRA"));
+
         let models = account.get("quota")?.get("models")?.as_array()?;
         let mut result = HashSet::new();
         for model in models {
             if let Some(name) = model.get("name").and_then(|v| v.as_str()) {
                 let normalized = name.trim().to_lowercase();
-                if !normalized.is_empty() {
-                    result.insert(normalized);
+                if normalized.is_empty() {
+                    continue;
                 }
+                if normalized.starts_with("claude-opus") && !is_ultra {
+                    continue;
+                }
+                if normalized.starts_with("claude-sonnet") && !is_pro_or_ultra {
+                    continue;
+                }
+                if normalized.starts_with("claude") && !is_pro_or_ultra {
+                    continue;
+                }
+                result.insert(normalized);
             }
         }
         Some(result)
@@ -4193,6 +4246,28 @@ impl TokenManager {
         all_models
     }
 
+    /// 检查池中是否有任何处于激活状态的账号具备 Claude Sonnet 资质 (PRO 或 ULTRA)
+    pub fn has_claude_sonnet_qualification(&self) -> bool {
+        self.tokens.iter().any(|entry| {
+            let t = entry.value();
+            if t.validation_blocked {
+                return false;
+            }
+            matches!(t.subscription_tier.as_deref(), Some("PRO") | Some("ULTRA"))
+        })
+    }
+
+    /// 检查池中是否有任何处于激活状态的账号具备 Claude Opus 资质 (ULTRA)
+    pub fn has_claude_opus_qualification(&self) -> bool {
+        self.tokens.iter().any(|entry| {
+            let t = entry.value();
+            if t.validation_blocked {
+                return false;
+            }
+            matches!(t.subscription_tier.as_deref(), Some("ULTRA"))
+        })
+    }
+
     /// [NEW] 从指定账号的动态额度数据中获取特定模型的 max_output_tokens
     ///
     /// # 返回
@@ -4888,6 +4963,7 @@ mod tests {
             .rate_limit_tracker
             .is_rate_limited(account_id, Some(model)));
 
+        std::env::remove_var("ABV_DATA_DIR");
         let _ = std::fs::remove_dir_all(&tmp_root);
     }
 
@@ -4991,6 +5067,7 @@ mod tests {
             serde_json::json!(["gemini-3-flash"])
         );
 
+        std::env::remove_var("ABV_DATA_DIR");
         let _ = std::fs::remove_dir_all(&tmp_root);
     }
 
@@ -5071,6 +5148,7 @@ mod tests {
         assert_eq!(selected.3, account_id);
         assert!(!manager.is_rate_limited(account_id, Some(model)).await);
 
+        std::env::remove_var("ABV_DATA_DIR");
         let _ = std::fs::remove_dir_all(&tmp_root);
     }
 
@@ -5177,6 +5255,7 @@ mod tests {
                 .is_rate_limited(account_id, Some("gemini-3-pro-image"))
         );
 
+        std::env::remove_var("ABV_DATA_DIR");
         let _ = std::fs::remove_dir_all(&tmp_root);
     }
 
@@ -5248,6 +5327,7 @@ mod tests {
         assert!(manager.tokens.get("acc1").is_none());
         assert!(manager.get_preferred_account().await.is_none());
 
+        std::env::remove_var("ABV_DATA_DIR");
         let _ = std::fs::remove_dir_all(&tmp_root);
     }
 
@@ -5295,6 +5375,96 @@ mod tests {
         // Keep the normalized quota bucket too; it is used for quota/protection checks.
         assert!(collected_models.contains("gemini-3-flash"));
 
+        std::env::remove_var("ABV_DATA_DIR");
+        let _ = std::fs::remove_dir_all(&tmp_root);
+    }
+
+    #[tokio::test]
+    async fn test_claude_model_filtering_and_qualification() {
+        let tmp_root = std::env::temp_dir().join(format!(
+            "antigravity-token-manager-test-claude-qual-{}",
+            uuid::Uuid::new_v4()
+        ));
+        let accounts_dir = tmp_root.join("accounts");
+        std::fs::create_dir_all(&accounts_dir).unwrap();
+
+        std::env::set_var("ABV_DATA_DIR", &tmp_root);
+
+        let now = chrono::Utc::now().timestamp();
+
+        let write_test_account = |id: &str, email: &str, tier: Option<&str>| {
+            let account_path = accounts_dir.join(format!("{}.json", id));
+            let json = serde_json::json!({
+                "id": id,
+                "email": email,
+                "token": {
+                    "access_token": format!("atk-{}", id),
+                    "refresh_token": format!("rtk-{}", id),
+                    "expires_in": 3600,
+                    "expiry_timestamp": now + 3600
+                },
+                "subscription_tier": tier,
+                "quota": {
+                    "subscription_tier": tier,
+                    "models": [
+                        { "name": "gemini-3.8-flash", "percentage": 100 },
+                        { "name": "claude-sonnet-4-6", "percentage": 100 },
+                        { "name": "claude-opus-4-6-thinking", "percentage": 100 }
+                    ]
+                },
+                "disabled": false,
+                "proxy_disabled": false,
+                "created_at": now,
+                "last_used": now
+            });
+            std::fs::write(&account_path, serde_json::to_string_pretty(&json).unwrap()).unwrap();
+        };
+
+        // 1. FREE account: Claude models must be filtered out
+        write_test_account("acc_free", "free@test.com", Some("FREE"));
+        let manager_free = TokenManager::new(tmp_root.clone());
+        manager_free.load_accounts().await.unwrap();
+
+        assert!(!manager_free.has_claude_sonnet_qualification());
+        assert!(!manager_free.has_claude_opus_qualification());
+        let free_models = manager_free.get_all_collected_models();
+        assert!(free_models.contains("gemini-3.8-flash"));
+        assert!(!free_models.contains("claude-sonnet-4-6"));
+        assert!(!free_models.contains("claude-opus-4-6-thinking"));
+
+        // Clean up accounts dir
+        let _ = std::fs::remove_dir_all(&accounts_dir);
+        std::fs::create_dir_all(&accounts_dir).unwrap();
+
+        // 2. PRO account: Sonnet allowed, Opus filtered out
+        write_test_account("acc_pro", "pro@test.com", Some("PRO"));
+        let manager_pro = TokenManager::new(tmp_root.clone());
+        manager_pro.load_accounts().await.unwrap();
+
+        assert!(manager_pro.has_claude_sonnet_qualification());
+        assert!(!manager_pro.has_claude_opus_qualification());
+        let pro_models = manager_pro.get_all_collected_models();
+        assert!(pro_models.contains("gemini-3.8-flash"));
+        assert!(pro_models.contains("claude-sonnet-4-6"));
+        assert!(!pro_models.contains("claude-opus-4-6-thinking"));
+
+        // Clean up accounts dir
+        let _ = std::fs::remove_dir_all(&accounts_dir);
+        std::fs::create_dir_all(&accounts_dir).unwrap();
+
+        // 3. ULTRA account: Both Sonnet and Opus allowed
+        write_test_account("acc_ultra", "ultra@test.com", Some("ULTRA"));
+        let manager_ultra = TokenManager::new(tmp_root.clone());
+        manager_ultra.load_accounts().await.unwrap();
+
+        assert!(manager_ultra.has_claude_sonnet_qualification());
+        assert!(manager_ultra.has_claude_opus_qualification());
+        let ultra_models = manager_ultra.get_all_collected_models();
+        assert!(ultra_models.contains("gemini-3.8-flash"));
+        assert!(ultra_models.contains("claude-sonnet-4-6"));
+        assert!(ultra_models.contains("claude-opus-4-6-thinking"));
+
+        std::env::remove_var("ABV_DATA_DIR");
         let _ = std::fs::remove_dir_all(&tmp_root);
     }
 
@@ -5370,6 +5540,7 @@ mod tests {
             Some("acc1".to_string())
         );
 
+        std::env::remove_var("ABV_DATA_DIR");
         let _ = std::fs::remove_dir_all(&tmp_root);
     }
 

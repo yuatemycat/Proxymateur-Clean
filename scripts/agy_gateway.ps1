@@ -304,17 +304,19 @@ if (-not $useNative) {
             if ($models -notcontains $m) { $models += $m }
         }
 
-        # Always ensure Claude 5.5 family with low/medium/high effort tiers is included for /model
-        foreach ($m in 'claude-opus-5-5', 'claude-opus-5-5-high', 'claude-opus-5-5-medium', 'claude-opus-5-5-low',
-                       'claude-sonnet-5-5', 'claude-sonnet-5-5-high', 'claude-sonnet-5-5-medium', 'claude-sonnet-5-5-low') {
-            if ($models -notcontains $m) { $models += $m }
+        # Claude models are ONLY included if legitimately returned by the proxy for qualified accounts.
+        # Prune bare slugs and alias duplicates to prevent duplicate title-case vs lowercase entries in agy.exe
+        if ($models -contains 'claude-opus-5-5-high') {
+            $models = @($models | Where-Object { $_ -ne 'claude-opus-5-5' })
         }
-
-        if ($models -contains 'claude-opus-4-6-thinking' -and ($models -notcontains 'claude-opus-4-6')) {
-            $models += 'claude-opus-4-6'
+        if ($models -contains 'claude-sonnet-5-5-high') {
+            $models = @($models | Where-Object { $_ -ne 'claude-sonnet-5-5' })
         }
-        if ($models -contains 'claude-sonnet-4-6' -and ($models -notcontains 'claude-sonnet-4-6-thinking')) {
-            $models += 'claude-sonnet-4-6-thinking'
+        if ($models -contains 'claude-opus-4-6-thinking') {
+            $models = @($models | Where-Object { $_ -ne 'claude-opus-4-6' })
+        }
+        if ($models -contains 'claude-sonnet-4-6') {
+            $models = @($models | Where-Object { $_ -ne 'claude-sonnet-4-6-thinking' })
         }
         $models = @($models | Sort-Object -Unique)
     } catch {

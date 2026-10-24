@@ -506,28 +506,47 @@ pub async fn get_all_dynamic_models(
         }
     }
 
-    // 3. 注入基准线核心模型（始终可用，供 /model 选择器展示）
+    // 3. 注入基准线核心模型（Gemini 基础型号始终可用，供 /model 选择器展示）
     if !only_raw_quota_models {
         for m in [
             "gemini-3.1-flash-lite",
-            "claude-sonnet-4-6",
-            "claude-sonnet-4-6-thinking",
-            "claude-opus-4-6",
-            "claude-opus-4-6-thinking",
-            "claude-sonnet-5-5",
-            "claude-sonnet-5-5-high",
-            "claude-sonnet-5-5-medium",
-            "claude-sonnet-5-5-low",
-            "claude-opus-5-5",
-            "claude-opus-5-5-high",
-            "claude-opus-5-5-medium",
-            "claude-opus-5-5-low",
             "gemini-4-argon",
             "gemini-4-argon-high",
             "gemini-4-argon-medium",
             "gemini-4-argon-low",
         ] {
             model_ids.insert(m.to_string());
+        }
+
+        // Claude 模型仅在当前账号池中存在对应资质 (PRO/ULTRA) 时注入，避免向无资质账号展示不可用模型
+        let has_sonnet = token_manager
+            .as_ref()
+            .map_or(false, |tm| tm.has_claude_sonnet_qualification());
+        let has_opus = token_manager
+            .as_ref()
+            .map_or(false, |tm| tm.has_claude_opus_qualification());
+
+        if has_sonnet {
+            for m in [
+                "claude-sonnet-4-6",
+                "claude-sonnet-4-6-thinking",
+                "claude-sonnet-5-5-high",
+                "claude-sonnet-5-5-medium",
+                "claude-sonnet-5-5-low",
+            ] {
+                model_ids.insert(m.to_string());
+            }
+        }
+
+        if has_opus {
+            for m in [
+                "claude-opus-4-6-thinking",
+                "claude-opus-5-5-high",
+                "claude-opus-5-5-medium",
+                "claude-opus-5-5-low",
+            ] {
+                model_ids.insert(m.to_string());
+            }
         }
     }
 
@@ -974,6 +993,15 @@ mod tests {
         // When only_raw_quota_models is FALSE, custom_mapping should be included
         let models_all = get_all_dynamic_models(&custom_mapping, None, false).await;
         assert!(models_all.contains(&"my-custom-model".to_string()));
+
+        // When token_manager is None or accounts do not qualify for Claude, Claude models must NOT be injected
+        assert!(!models_all.contains(&"claude-opus-4-6".to_string()));
+        assert!(!models_all.contains(&"claude-opus-5-5".to_string()));
+        assert!(!models_all.contains(&"claude-sonnet-4-6".to_string()));
+        assert!(!models_all.contains(&"claude-sonnet-5-5-high".to_string()));
+        // Gemini baseline models must still be present
+        assert!(models_all.contains(&"gemini-3.1-flash-lite".to_string()));
+        assert!(models_all.contains(&"gemini-4-argon".to_string()));
     }
 
     #[tokio::test]
