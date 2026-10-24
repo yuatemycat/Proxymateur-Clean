@@ -42,20 +42,94 @@ You bring your own Google OAuth credentials (see [setup below](#bring-your-own-g
 
 ## How it fits together
 
+### 1. System Architecture & Component Topology
+
+```mermaid
+flowchart TD
+    subgraph Clients ["Callers & Interfaces"]
+        UI["Desktop App<br/>(Tauri v2 + React 19)"]
+        CLI["Antigravity CLI<br/>(agy -px)"]
+        Agents["AI Agents & IDEs<br/>(Cursor / Claude Code / Windsurf)"]
+        Tools["REST Clients<br/>(cURL / Python / SDKs)"]
+    end
+
+    subgraph Ingress ["Access Channels"]
+        MCP["Native MCP Server<br/>(stdio: list_accounts, switch, quotas)"]
+        Tunnel["Cloudflare Tunnel<br/>(cloudflared Quick / Auth)"]
+        Proxy["Local Axum Proxy (127.0.0.1:8045)<br/>OpenAI: /v1/chat/completions, /v1/models<br/>Anthropic: /v1/messages<br/>Gemini: /v1beta/models/*"]
+    end
+
+    subgraph Core ["Proxy Core & Governance"]
+        Mapper["Model Remapper & Protocol Translator<br/>(Effort suffixes -low/-high, version mapping)"]
+        QuotaMgr["Quota & Cooldown Manager<br/>(Rolling 5h & weekly quota tracking)"]
+        Circuit["Circuit Breaker & Account Rotator<br/>(Auto-switch on 429 exhaustion or invalid_grant)"]
+        Pool["Outbound Proxy Pool<br/>(Round-robin, priority, least-conn)"]
+        Monitor["SSE Stream Interceptor & Monitor<br/>(Real-time token counting, zero-overhead mode)"]
+    end
+
+    subgraph Storage ["Local Storage & Config"]
+        DB[("SQLite Database<br/>~/.proxymateur/proxy_logs.db<br/>(accounts, tokens, traffic logs)")]
+        Settings["CLI Settings File<br/>~/.gemini/antigravity-cli/settings.json<br/>(54 Antigravity Lab experiment flags)"]
+    end
+
+    subgraph Upstreams ["Upstream Execution Targets"]
+        Accounts["Antigravity Multi-Account Pool<br/>(Google OAuth 2.0 Clients<br/>Gemini 3.8 Flash, 3.5 Pro, Claude Opus)"]
+        Vertex["Google Cloud Vertex AI<br/>(GCP ADC / Service Account<br/>Gemini 4 Argon, 3.8 Flash)"]
+        OpenAICompat["OpenAI-Compatible Providers<br/>(Groq, NVIDIA NIM, OpenRouter, Ollama)"]
+    end
+
+    UI --> Ingress
+    UI -.->|Read/Write| Settings
+    UI -.->|Read/Write| DB
+    Agents -->|stdio protocol| MCP
+    Agents -->|HTTP requests| Proxy
+    CLI -->|HTTP requests| Proxy
+    Tools -->|HTTP requests| Proxy
+    Tunnel -->|Ingress bridge| Proxy
+
+    MCP -->|Direct control| QuotaMgr
+    Proxy --> Mapper
+    Mapper --> QuotaMgr
+    QuotaMgr --> Circuit
+    Circuit --> Pool
+    Proxy -.-> Monitor
+    Monitor -.->|Async logging| DB
+
+    Pool -->|OAuth authenticated| Accounts
+    Pool -->|ADC / Service Account| Vertex
+    Pool -->|Custom API keys| OpenAICompat
 ```
- Desktop app      Antigravity CLI (agy -px)      Cursor / Claude Code / other tools
-      |                     |                                   |
-      +---------------------+-----------------------------------+
-                            |
-              Local proxy (Axum, 127.0.0.1:8045)
-                /v1/chat/completions   /v1/models         (OpenAI style)
-                /v1/messages                              (Anthropic style)
-                /v1beta/models/*                          (Gemini style)
-                            |
-          +-----------------+------------------+
-          |                 |                  |
-   Antigravity accounts   Vertex AI      OpenAI-compatible
-   (your OAuth client)   (your GCP)      upstreams
+
+### 2. Request Lifecycle & Automatic Failover
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as AI Agent / CLI / Tool
+    participant Proxy as Local Proxy (Axum:8045)
+    participant Engine as Quota & Circuit Breaker
+    participant Primary as Account A (Active)
+    participant Secondary as Account B (Backup)
+    participant Store as SQLite (~/.proxymateur)
+
+    Client->>Proxy: POST /v1/chat/completions (or /v1/messages)
+    Proxy->>Engine: Resolve model & select healthy account
+    Engine-->>Proxy: Account A selected (Quota OK)
+
+    Proxy->>Primary: Forward upstream with OAuth Bearer Token
+    alt Primary returns 200 OK
+        Primary-->>Proxy: SSE Token Stream (chunked)
+        Proxy-->>Client: Stream SSE chunks in real time
+        Proxy-)Store: Asynchronously log token usage & latency
+    else Primary returns 429 (Quota Exceeded) or invalid_grant
+        Primary-->>Proxy: 429 Too Many Requests
+        Proxy->>Engine: Trip Circuit Breaker for Account A (backoff cooldown)
+        Engine-->>Proxy: Auto-rotate to Account B
+        Proxy->>Secondary: Transparent retry with Account B
+        Secondary-->>Proxy: SSE Token Stream (chunked)
+        Proxy-->>Client: Stream SSE chunks without session interruption
+        Proxy-)Store: Record failover event & update quota stats
+    end
 ```
 
 Account data and settings are stored locally in SQLite under `~/.proxymateur`. The CLI settings the app edits live in `~/.gemini/antigravity-cli/settings.json`.
