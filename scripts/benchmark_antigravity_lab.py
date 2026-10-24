@@ -206,21 +206,25 @@ def benchmark_binary_forensics():
         return data[r : r + length].decode("utf-8", errors="replace")
 
     flag_offsets = {}
-    verified_count = 0
+    found_count = 0
+    flags_not_found = []
 
     for g_id, g in GROUPS.items():
         for snake, kebab in g["flags"]:
+            # Only the exact kebab-case experiment key counts. The snake_case form is
+            # recorded for information but is NOT a match: e.g. enable_voice_activity_events
+            # appears in Google Cloud Speech protobuf definitions, not as an agy experiment key.
             off_kebab = data.find(kebab.encode("utf-8"))
             off_snake = data.find(snake.encode("utf-8"))
-            best_off = off_kebab if off_kebab != -1 else off_snake
-            matched_form = "kebab" if off_kebab != -1 else ("snake" if off_snake != -1 else None)
-            if best_off != -1:
-                verified_count += 1
+            if off_kebab != -1:
+                found_count += 1
+            else:
+                flags_not_found.append(kebab)
             flag_offsets[snake] = {
                 "kebab": kebab,
                 "group": g_id,
-                "agy_offset": f"0x{best_off:x}" if best_off != -1 else None,
-                "matched_form": matched_form,
+                "agy_offset": f"0x{off_kebab:x}" if off_kebab != -1 else None,
+                "matched_form": "kebab" if off_kebab != -1 else None,
                 "raw_kebab": f"0x{off_kebab:x}" if off_kebab != -1 else None,
                 "raw_snake": f"0x{off_snake:x}" if off_snake != -1 else None,
             }
@@ -265,19 +269,21 @@ def benchmark_binary_forensics():
     proxcv_off = data.find(b"PROX_CMD_V1")
     elapsed = time.perf_counter() - t0
     print(f"Scanned agy.exe ({len(data):,} bytes, ImageBase=0x{image_base:x}) in {elapsed:.2f}s")
-    print(f"Verified Binary Flag Presence: {verified_count}/54 flags (100.0%)")
-    print(f"Verified Native Slash Command Descriptors (@ 0x{NATIVE_CMD_TABLE_RAW:x}): {len(native_commands)}/{NATIVE_CMD_COUNT}")
-    print(f"Verified Patched .proxcv GenericCommand Structs (@ 0x14e574400): {len(proxcv_commands)}/{PROXCV_CMD_COUNT}")
+    print(f"Flag names found as exact strings in the binary: {found_count}/54 (not found: {', '.join(flags_not_found) or 'none'})")
+    print("(String presence only; it does not show what a flag does.)")
+    print(f"Native slash command entries read (@ 0x{NATIVE_CMD_TABLE_RAW:x}): {len(native_commands)}/{NATIVE_CMD_COUNT}")
+    print(f"Injected .proxcv GenericCommand entries read (@ 0x14e574400): {len(proxcv_commands)}/{PROXCV_CMD_COUNT}")
     print(f"Patched .proxcv Command Cave Marker (PROX_CMD_V1): {'0x' + format(proxcv_off, 'x') if proxcv_off != -1 else 'NOT FOUND'}")
 
     return {
         "binary_exists": True,
         "binary_size_bytes": len(data),
         "image_base": f"0x{image_base:x}",
-        "verified_flags_in_binary": verified_count,
-        "native_commands_verified": len(native_commands),
+        "flags_found_as_strings": found_count,
+        "flags_not_found": flags_not_found,
+        "native_commands_read": len(native_commands),
         "native_commands": native_commands,
-        "proxcv_commands_verified": len(proxcv_commands),
+        "proxcv_commands_read": len(proxcv_commands),
         "proxcv_code_va": f"0x{proxcv_sec['va']:x}" if proxcv_sec else None,
         "proxcv_code_raw": f"0x{proxcv_sec['raw_ptr']:x}" if proxcv_sec else None,
         "proxcv_data_va": f"0x{proxcv_sec['va'] + PROXCV_DATA_OFFSET:x}" if proxcv_sec else None,
@@ -691,13 +697,14 @@ def main():
         "transcript_telemetry": transcript_res,
     }
 
-    out_dir = Path("scratch")
-    out_dir.mkdir(exist_ok=True)
-    out_file = out_dir / "antigravity_lab_benchmark_results.json"
-    out_file.write_text(json.dumps(final_report, indent=2), encoding="utf-8")
+    # Save to both docs/telemetry and scratch
+    for out_dir in [Path("docs/telemetry"), Path("scratch")]:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_file = out_dir / "antigravity_lab_benchmark_results.json"
+        out_file.write_text(json.dumps(final_report, indent=2), encoding="utf-8")
+        print(f"Full telemetry report written to: {out_file}")
 
     print(f"\nBenchmark completed in {total_duration:.2f}s.")
-    print(f"Full telemetry report written to: {out_file}")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,12 @@
 import {
     LayoutDashboard,
     Users,
+    Network,
+    Activity,
+    BarChart3,
     Home,
+    Bot,
+    Eye,
     BookOpen,
     type LucideIcon,
 } from 'lucide-react';
@@ -38,6 +43,25 @@ export const SIDEBAR_HUBS: SidebarHub[] = [
             { path: '/', labelKey: 'nav.dashboard', defaultLabel: 'Dashboard', icon: LayoutDashboard },
             { path: '/accounts', labelKey: 'nav.accounts', defaultLabel: 'Accounts', icon: Users },
             { path: '/readme', labelKey: 'nav.readme', defaultLabel: 'Readme', icon: BookOpen },
+        ],
+    },
+    {
+        id: 'agent-proxy',
+        labelKey: 'nav.hub_agent_proxy',
+        defaultLabel: 'Agent Proxy',
+        icon: Bot,
+        items: [
+            { path: '/api-proxy', labelKey: 'nav.proxy', defaultLabel: 'API Proxy', icon: Network },
+        ],
+    },
+    {
+        id: 'observability',
+        labelKey: 'nav.hub_observability',
+        defaultLabel: 'Observability',
+        icon: Eye,
+        items: [
+            { path: '/monitor', labelKey: 'nav.call_records', defaultLabel: 'Traffic Logs', icon: Activity },
+            { path: '/token-stats', labelKey: 'nav.token_stats', defaultLabel: 'Token Stats', icon: BarChart3 },
         ],
     },
 ];

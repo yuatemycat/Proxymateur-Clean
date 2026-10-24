@@ -1,12 +1,15 @@
 {
-  "timestamp": "2026-10-23T10:24:40Z",
-  "duration_seconds": 7.5195,
+  "timestamp": "2026-10-23T23:02:49Z",
+  "duration_seconds": 7.9253,
   "binary_forensics": {
     "binary_exists": true,
     "binary_size_bytes": 204027392,
     "image_base": "0x140000000",
-    "verified_flags_in_binary": 54,
-    "native_commands_verified": 12,
+    "flags_found_as_strings": 53,
+    "flags_not_found": [
+      "enable-voice-activity-events"
+    ],
+    "native_commands_read": 12,
     "native_commands": [
       {
         "index": 0,
@@ -81,7 +84,7 @@
         "description": "Experimental. Invoke the review agent to audit code changes, surface bugs, and verify correctness."
       }
     ],
-    "proxcv_commands_verified": 11,
+    "proxcv_commands_read": 11,
     "proxcv_code_va": "0x14e574000",
     "proxcv_code_raw": "0xc292600",
     "proxcv_data_va": "0x14e574400",
@@ -166,7 +169,7 @@
       }
     ],
     "proxcv_marker_offset": "0xc292fda",
-    "scan_seconds": 2.4817,
+    "scan_seconds": 2.5563,
     "flag_offsets": {
       "jetski_autonomous_mode": {
         "kebab": "jetski-autonomous-mode",
@@ -579,8 +582,8 @@
       "enable_voice_activity_events": {
         "kebab": "enable-voice-activity-events",
         "group": "group_7_cortex_planning_trajectory",
-        "agy_offset": "0x3e4e85d",
-        "matched_form": "snake",
+        "agy_offset": null,
+        "matched_form": null,
         "raw_kebab": null,
         "raw_snake": "0x3e4e85d"
       },
@@ -604,23 +607,23 @@
   },
   "flag_matrix_and_sync": {
     "total_flags": 54,
-    "translation_ops_sec": 8341714,
+    "translation_ops_sec": 8562811,
     "regex_passes": 54,
     "regex_failures": [],
-    "settings_active_flags": 36,
+    "settings_active_flags": 43,
     "gui_active_flags": 35,
     "synced_flag_count": 35
   },
   "transcript_telemetry": {
-    "conversations_scanned": 479,
-    "lines_scanned": 178323,
-    "scan_seconds": 4.6449,
-    "scan_lines_per_sec": 38391,
-    "total_invoke_subagent_calls": 82,
-    "total_spawned_subagents": 154,
+    "conversations_scanned": 474,
+    "lines_scanned": 179969,
+    "scan_seconds": 5.0046,
+    "scan_lines_per_sec": 35961,
+    "total_invoke_subagent_calls": 88,
+    "total_spawned_subagents": 160,
     "subagent_models": {
       "flash": 23,
-      "inherit": 131
+      "inherit": 137
     },
     "subagent_typenames": {
       "self": 130,
@@ -629,56 +632,56 @@
       "gladiator_canvas_a": 1,
       "gladiator_webgl_b": 1,
       "research": 6,
-      "DeepCoder": 4,
-      "DeepCoderWorkerL0": 2,
+      "DeepCoderWorkerL0": 4,
+      "DeepCoderImprovementWorker": 3,
+      "DeepCoder": 6,
       "DeepInvestigator": 1,
       "milestone_worker": 3,
       "path_sanitizer_core": 1,
-      "path_sanitizer_tests": 1,
-      "DeepCoderImprovementWorker": 1
+      "path_sanitizer_tests": 1
     },
     "tool_call_totals": {
-      "run_command": 40200,
-      "view_file": 19211,
-      "manage_task": 8515,
-      "write_to_file": 4128,
-      "replace_file_content": 3366,
-      "read_file": 2138,
-      "call_mcp_tool": 1539,
+      "run_command": 40678,
+      "view_file": 19224,
+      "manage_task": 8533,
+      "write_to_file": 4181,
+      "replace_file_content": 3378,
+      "read_file": 2234,
+      "call_mcp_tool": 1542,
+      "write_file": 906,
       "manage_subagents": 865,
-      "write_file": 860,
-      "edit_file": 553,
-      "schedule": 270,
-      "search_web": 181,
-      "send_message": 163,
-      "invoke_subagent": 82,
+      "edit_file": 563,
+      "schedule": 273,
+      "search_web": 185,
+      "send_message": 169,
+      "invoke_subagent": 88,
+      "grep_search": 43,
       "read_url_content": 22,
       "ask_question": 21,
+      "list_dir": 10,
       "define_subagent": 10,
-      "grep_search": 5,
-      "list_dir": 4,
       "tail_task_log": 4,
       "agy-context-guard:tail_task_log": 3,
-      "find_by_name": 2,
+      "find_by_name": 3,
       "list_resources": 1,
       "generate_image": 1
     },
     "top_mcp_tools": {
-      "agy-context-guard/tail_task_log": 489,
+      "agy-context-guard/tail_task_log": 490,
       "pyghidra/decompile_function": 182,
       "pyghidra/disassemble": 112,
-      "code-review-graph/build_or_update_graph_tool": 99,
-      "ghidra-mcp/decompile_function": 89,
-      "code-review-graph/list_graph_stats_tool": 77,
-      "ghidra-mcp/disassemble": 69,
+      "code-review-graph/build_or_update_graph_tool": 100,
+      "SuperghidraMCP/decompile_function": 89,
+      "code-review-graph/list_graph_stats_tool": 78,
+      "SuperghidraMCP/disassemble": 69,
       "pyghidra/read_bytes": 44,
-      "ghidra-mcp/list_project_binaries": 41,
+      "SuperghidraMCP/list_project_binaries": 41,
       "pyghidra/list_project_binaries": 32,
       "memory/create_entities": 31,
       "pyghidra/list_xrefs": 26,
-      "ghidra-mcp/list_xrefs": 22,
+      "SuperghidraMCP/list_xrefs": 22,
       "memory/add_observations": 21,
-      "ghidra-mcp/list_project_binary_metadata": 18
+      "SuperghidraMCP/list_project_binary_metadata": 18
     },
     "workflow_comparison": {
       "/swarm": {
@@ -715,6 +718,36 @@
           "milestone_worker": 3,
           "path_sanitizer_core": 1,
           "path_sanitizer_tests": 1
+        }
+      },
+      "/owl": {
+        "invocations": 32,
+        "unique_sessions": 27,
+        "window_steps": 12632,
+        "avg_steps_per_invocation": 394.8,
+        "window_tool_calls": 6035,
+        "avg_tools_per_invocation": 188.6,
+        "session_steps": 20047,
+        "avg_steps_per_session": 742.5,
+        "session_tool_calls": 9464,
+        "avg_tools_per_session": 350.5,
+        "invoke_subagent_calls": 8,
+        "spawned_subagents": 9,
+        "manage_subagents_calls": 12,
+        "define_subagent_calls": 2,
+        "send_message_calls": 0,
+        "ask_question_calls": 0,
+        "ask_question_invocations": 0,
+        "ask_question_rate_pct": 0.0,
+        "schedule_calls": 4,
+        "subagent_models": {
+          "inherit": 9
+        },
+        "subagent_typenames": {
+          "self": 4,
+          "DeepCoder": 3,
+          "DeepInvestigator": 1,
+          "research": 1
         }
       },
       "/learn": {
@@ -766,36 +799,6 @@
         "schedule_calls": 20,
         "subagent_models": {},
         "subagent_typenames": {}
-      },
-      "/owl": {
-        "invocations": 29,
-        "unique_sessions": 25,
-        "window_steps": 12444,
-        "avg_steps_per_invocation": 429.1,
-        "window_tool_calls": 5947,
-        "avg_tools_per_invocation": 205.1,
-        "session_steps": 19796,
-        "avg_steps_per_session": 791.8,
-        "session_tool_calls": 9355,
-        "avg_tools_per_session": 374.2,
-        "invoke_subagent_calls": 7,
-        "spawned_subagents": 8,
-        "manage_subagents_calls": 12,
-        "define_subagent_calls": 2,
-        "send_message_calls": 0,
-        "ask_question_calls": 0,
-        "ask_question_invocations": 0,
-        "ask_question_rate_pct": 0.0,
-        "schedule_calls": 4,
-        "subagent_models": {
-          "inherit": 8
-        },
-        "subagent_typenames": {
-          "self": 4,
-          "DeepCoder": 2,
-          "DeepInvestigator": 1,
-          "research": 1
-        }
       },
       "/benchmark": {
         "invocations": 11,
@@ -854,6 +857,35 @@
           "research": 1
         }
       },
+      "/boost": {
+        "invocations": 9,
+        "unique_sessions": 7,
+        "window_steps": 409,
+        "avg_steps_per_invocation": 45.4,
+        "window_tool_calls": 158,
+        "avg_tools_per_invocation": 17.6,
+        "session_steps": 1866,
+        "avg_steps_per_session": 266.6,
+        "session_tool_calls": 811,
+        "avg_tools_per_session": 115.9,
+        "invoke_subagent_calls": 10,
+        "spawned_subagents": 10,
+        "manage_subagents_calls": 0,
+        "define_subagent_calls": 0,
+        "send_message_calls": 3,
+        "ask_question_calls": 0,
+        "ask_question_invocations": 0,
+        "ask_question_rate_pct": 0.0,
+        "schedule_calls": 0,
+        "subagent_models": {
+          "inherit": 10
+        },
+        "subagent_typenames": {
+          "DeepCoderWorkerL0": 4,
+          "DeepCoderImprovementWorker": 3,
+          "DeepCoder": 3
+        }
+      },
       "/battle": {
         "invocations": 8,
         "unique_sessions": 7,
@@ -906,46 +938,17 @@
         "subagent_models": {},
         "subagent_typenames": {}
       },
-      "/boost": {
-        "invocations": 6,
-        "unique_sessions": 5,
-        "window_steps": 353,
-        "avg_steps_per_invocation": 58.8,
-        "window_tool_calls": 147,
-        "avg_tools_per_invocation": 24.5,
-        "session_steps": 1778,
-        "avg_steps_per_session": 355.6,
-        "session_tool_calls": 791,
-        "avg_tools_per_session": 158.2,
-        "invoke_subagent_calls": 5,
-        "spawned_subagents": 5,
-        "manage_subagents_calls": 0,
-        "define_subagent_calls": 0,
-        "send_message_calls": 1,
-        "ask_question_calls": 0,
-        "ask_question_invocations": 0,
-        "ask_question_rate_pct": 0.0,
-        "schedule_calls": 0,
-        "subagent_models": {
-          "inherit": 5
-        },
-        "subagent_typenames": {
-          "DeepCoder": 2,
-          "DeepCoderWorkerL0": 2,
-          "DeepCoderImprovementWorker": 1
-        }
-      },
       "/teamwork-preview": {
         "invocations": 5,
         "unique_sessions": 5,
-        "window_steps": 1082,
-        "avg_steps_per_invocation": 216.4,
-        "window_tool_calls": 489,
-        "avg_tools_per_invocation": 97.8,
-        "session_steps": 5856,
-        "avg_steps_per_session": 1171.2,
-        "session_tool_calls": 2656,
-        "avg_tools_per_session": 531.2,
+        "window_steps": 1090,
+        "avg_steps_per_invocation": 218.0,
+        "window_tool_calls": 490,
+        "avg_tools_per_invocation": 98.0,
+        "session_steps": 5908,
+        "avg_steps_per_session": 1181.6,
+        "session_tool_calls": 2670,
+        "avg_tools_per_session": 534.0,
         "invoke_subagent_calls": 2,
         "spawned_subagents": 2,
         "manage_subagents_calls": 0,
@@ -985,6 +988,33 @@
         "subagent_models": {},
         "subagent_typenames": {}
       },
+      "/queue": {
+        "invocations": 3,
+        "unique_sessions": 2,
+        "window_steps": 546,
+        "avg_steps_per_invocation": 182.0,
+        "window_tool_calls": 254,
+        "avg_tools_per_invocation": 84.7,
+        "session_steps": 595,
+        "avg_steps_per_session": 297.5,
+        "session_tool_calls": 270,
+        "avg_tools_per_session": 135.0,
+        "invoke_subagent_calls": 1,
+        "spawned_subagents": 1,
+        "manage_subagents_calls": 0,
+        "define_subagent_calls": 0,
+        "send_message_calls": 0,
+        "ask_question_calls": 0,
+        "ask_question_invocations": 0,
+        "ask_question_rate_pct": 0.0,
+        "schedule_calls": 0,
+        "subagent_models": {
+          "inherit": 1
+        },
+        "subagent_typenames": {
+          "DeepCoder": 1
+        }
+      },
       "/btw": {
         "invocations": 3,
         "unique_sessions": 1,
@@ -1019,29 +1049,6 @@
         "avg_steps_per_session": 5502.0,
         "session_tool_calls": 2600,
         "avg_tools_per_session": 2600.0,
-        "invoke_subagent_calls": 0,
-        "spawned_subagents": 0,
-        "manage_subagents_calls": 0,
-        "define_subagent_calls": 0,
-        "send_message_calls": 0,
-        "ask_question_calls": 0,
-        "ask_question_invocations": 0,
-        "ask_question_rate_pct": 0.0,
-        "schedule_calls": 0,
-        "subagent_models": {},
-        "subagent_typenames": {}
-      },
-      "/queue": {
-        "invocations": 1,
-        "unique_sessions": 1,
-        "window_steps": 306,
-        "avg_steps_per_invocation": 306.0,
-        "window_tool_calls": 147,
-        "avg_tools_per_invocation": 147.0,
-        "session_steps": 306,
-        "avg_steps_per_session": 306.0,
-        "session_tool_calls": 147,
-        "avg_tools_per_session": 147.0,
         "invoke_subagent_calls": 0,
         "spawned_subagents": 0,
         "manage_subagents_calls": 0,

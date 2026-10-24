@@ -198,101 +198,96 @@ export default function Readme() {
                 {/* 05 */}
                 <Section id="lab" index="05" label="Antigravity Lab & Experimental Features">
                     <P>
-                        Located in <InlineLink to="/settings">Settings</InlineLink>, on the Advanced tab. Manages the complete matrix of 54
-                        cutting-edge experimental flags organized into 7 functional groups, discovered through binary analysis of{' '}
-                        <Code>language_server.exe</Code> and <Code>agy.exe</Code>. Changes sync directly to{' '}
+                        Located in <InlineLink to="/settings">Settings</InlineLink>, on the Advanced tab. Provides toggles for 54
+                        Antigravity experiment flags, grouped into 7 clusters in this UI. 53 of the 54 names appear as strings in{' '}
+                        <Code>agy.exe</Code>; none has been confirmed by switching it on and off. The project README lists the <Code>agy.exe</Code> function that reads each toggle. Changes sync directly to{' '}
                         <Code>~/.gemini/antigravity-cli/settings.json</Code> and are parsed by the CLI launch gateway.
                     </P>
                     <div>
                         <Row label="Dynamic Slash Commands">
                             <div className="space-y-1.5 text-xs text-base-content/80">
-                                <div><Code>/owl &lt;task&gt;</Code> &mdash; Deep architectural synthesis via DeepInvestigator &amp; DeepCoder on full Gemini Pro.</div>
-                                <div><Code>/battle &lt;task&gt;</Code> &mdash; Colosseum Arena pitting two rival subagents against each other to debate code, benchmark performance, and crown a winner.</div>
-                                <div><Code>/swarm &lt;task&gt;</Code> &mdash; Autonomous Multi-Agent Swarm Hub executing end-to-end hands-free builds without confirmation stalls.</div>
-                                <div><Code>/benchmark &lt;task&gt;</Code> &mdash; Programmatic dynamic tool synthesis to generate stress tests and measure frame budgets/latency.</div>
-                                <div><Code>/generative_ui &lt;task&gt;</Code> &mdash; Interactive HTML5/JS/Canvas widgets rendered live inside chat artifacts.</div>
-                                <div><Code>/compact</Code> &mdash; Trajectory pruning and context recycling while pinning session state.</div>
-                                <div><Code>/plan &lt;task&gt;</Code> &mdash; Interactive step-by-step architectural planning and milestone execution.</div>
-                                <div><Code>/btw &lt;query&gt;</Code> &mdash; Quick aside question rendered in an interactive overlay card (copy via <Code>/copy btw</Code>).</div>
+                                <div className="text-base-content/60">Descriptions are the strings stored in the <Code>agy.exe</Code> command tables (injected entries for the first six, the native entry for <Code>/plan</Code>).</div>
+                                <div><Code>/owl</Code> &mdash; Deep codebase investigation, iterative autonomous synthesis.</div>
+                                <div><Code>/battle</Code> &mdash; Colosseum Battle Mode. Competing subagents in an adversarial arena.</div>
+                                <div><Code>/swarm</Code> &mdash; Autonomous Multi-Agent Swarm Hub. Coordinates parallel specialist subagents.</div>
+                                <div><Code>/benchmark</Code> &mdash; Programmatic Tool Synthesis &amp; Performance Benchmarking.</div>
+                                <div><Code>/generative_ui</Code> &mdash; Render dynamic interactive UI widgets, charts, and visualizations.</div>
+                                <div><Code>/compact</Code> &mdash; Compact and prune active conversation context history.</div>
+                                <div><Code>/plan</Code> &mdash; Plan carefully before executing a task.</div>
                             </div>
                         </Row>
-                        <Row label="Group 1: Multi-Agent & Swarm">
+                        <Row label="Cluster 1">
                             <div className="space-y-2">
                                 <div className="text-xs text-base-content/80">
-                                    Controls autonomous execution (<Code>jetski-autonomous-mode</Code>), subagent model tier inheritance (<Code>disable-teamwork-forced-flash-model</Code>),
-                                    hub lifecycle (<Code>enable-subagent-hub</Code>), live telemetry monitoring (<Code>enable-swarm-monitor</Code>), conversation forking (<Code>enable-fork-with-subagents</Code>),
-                                    reactive message dispatch (<Code>send-subagent-initial-prompt-as-message</Code>), swarm narrators (<Code>enable-swarm-narrator</Code>), and native visual generation (<Code>enable-image-generator-subagent</Code>).
+                                    Toggles: <Code>jetski-autonomous-mode</Code>, <Code>disable-teamwork-forced-flash-model</Code>, <Code>enable-subagent-hub</Code>, <Code>enable-swarm-monitor</Code>,
+                                    <Code>enable-fork-with-subagents</Code>, <Code>send-subagent-initial-prompt-as-message</Code>, <Code>enable-swarm-narrator</Code>, <Code>enable-image-generator-subagent</Code>.
                                 </div>
                                 <div className="text-[11px] font-mono text-base-content/65 bg-base-content/[0.04] p-2.5 rounded border border-base-content/10 whitespace-pre overflow-x-auto leading-relaxed">
-{`// Verified Transcript Proof: Subagent Lifecycle & Messaging
+{`// Observed in the author's transcripts (shows the calls were made, not what any toggle does): subagent lifecycle & messaging
 {"step_index": 71, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "invoke_subagent", "arguments": {"Model": "flash", "Role": "Tier 1 Architect", "Prompt": "Refactor into Progressive Disclosure Architecture..."}}]}
 {"step_index": 493, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "manage_subagents", "arguments": {"Action": "list"}}]}
 {"step_index": 124, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "send_message", "arguments": {"Recipient": "subagent-worker-1", "Message": "Issue #13 serialization completed."}}]}`}
                                 </div>
                             </div>
                         </Row>
-                        <Row label="Group 2: Deep Exploration & Arena">
+                        <Row label="Cluster 2">
                             <div className="space-y-2">
                                 <div className="text-xs text-base-content/80">
-                                    Enables slash commands (<Code>enable-owl-slash-command</Code>, <Code>enable-compact-slash-command</Code>), adversarial duels (<Code>enable-battle-mode</Code>, <Code>enable-battle-mode-custom-agents</Code>),
-                                    programmatic test synthesis (<Code>enable-programmatic-tools</Code>), Generative UI widgets (<Code>jetski-generative-ui</Code>), multi-pass reasoning (<Code>enable-deepagent</Code>), and audit gates (<Code>enable-review</Code>).
+                                    Toggles: <Code>enable-owl-slash-command</Code>, <Code>enable-compact-slash-command</Code>, <Code>enable-battle-mode</Code>, <Code>enable-battle-mode-custom-agents</Code>,
+                                    <Code>enable-programmatic-tools</Code>, <Code>jetski-generative-ui</Code>, <Code>enable-deepagent</Code>, <Code>enable-review</Code>.
                                 </div>
                                 <div className="text-[11px] font-mono text-base-content/65 bg-base-content/[0.04] p-2.5 rounded border border-base-content/10 whitespace-pre overflow-x-auto leading-relaxed">
-{`// Verified Transcript Proof: Programmatic Tool Synthesis (/benchmark)
+{`// Observed in the author's transcripts: a /benchmark session
 {"step_index": 0, "type": "USER_INPUT", "content": "/benchmark Test the flags in Antigravity Lab..."}
 {"step_index": 1, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "write_file", "arguments": {"Path": "scratch/benchmark_antigravity_lab.py", "Content": "#!/usr/bin/env python3\\nimport time..."}}]}
 {"step_index": 2, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "run_command", "arguments": {"CommandLine": "python scratch/benchmark_antigravity_lab.py", "WaitMsBeforeAsync": 10000}}]}`}
                                 </div>
                             </div>
                         </Row>
-                        <Row label="Group 3: Customizations 2.0 & Plugins">
+                        <Row label="Cluster 3">
                             <div className="space-y-2">
                                 <div className="text-xs text-base-content/80">
-                                    Powers the modular plugin subsystem (<Code>enable-plugins</Code>), hook telemetry (<Code>enable-hook-status</Code>), discrete kinds (<Code>enable-customization-kind-agent</Code>, <Code>enable-customization-kind-skill</Code>, <Code>enable-customization-kind-rule</Code>, <Code>enable-customization-kind-mcp</Code>, <Code>enable-customization-kind-hooks</Code>), and legacy deprecation (<Code>deprecate-workflows</Code>).
+                                    Toggles: <Code>enable-plugins</Code>, <Code>enable-hook-status</Code>, <Code>enable-customization-kind-agent</Code>, <Code>enable-customization-kind-skill</Code>, <Code>enable-customization-kind-rule</Code>, <Code>enable-customization-kind-mcp</Code>, <Code>enable-customization-kind-hooks</Code>, <Code>deprecate-workflows</Code>.
                                 </div>
                                 <div className="text-[11px] font-mono text-base-content/65 bg-base-content/[0.04] p-2.5 rounded border border-base-content/10 whitespace-pre overflow-x-auto leading-relaxed">
-{`// Verified Transcript Proof: Dynamic Subagent Persona Registration
+{`// Observed in the author's transcripts: a define_subagent call
 {"step_index": 105, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "define_subagent", "arguments": {"Name": "ReadmeEngineer", "Description": "Specialist agent for technical documentation", "EnableMCPTools": true, "EnableWriteTools": true}}]}`}
                                 </div>
                             </div>
                         </Row>
-                        <Row label="Group 4: Sidecar Micro-Frontends">
+                        <Row label="Cluster 4">
                             <div className="text-xs text-base-content/80 leading-relaxed">
-                                Unlocks embedded iframe companion webviews (<Code>enable-sidecars</Code>, <Code>enable-ui-sidecars</Code>), the companion Sidecar SDK (<Code>enable-sidecar-sdk</Code>),
-                                manifest permission verification (<Code>jetski-sidecar-declared-permissions</Code>), local gateway routing (<Code>sidecar-gateway</Code>), and background iframe pre-warming (<Code>sidecar-iframe-prewarm</Code>).
+                                Toggles: <Code>enable-sidecars</Code>, <Code>enable-ui-sidecars</Code>, <Code>enable-sidecar-sdk</Code>, <Code>jetski-sidecar-declared-permissions</Code>, <Code>sidecar-gateway</Code>, <Code>sidecar-iframe-prewarm</Code>.
                             </div>
                         </Row>
-                        <Row label="Group 5: DeepMind AGI Safety & Guardrails">
+                        <Row label="Cluster 5">
                             <div className="text-xs text-base-content/80 leading-relaxed">
-                                Enforces proactive command safety classifiers (<Code>enable-command-assessor</Code>), heuristic destructive pattern blockers (<Code>enable-command-antivirus</Code>),
-                                experimental monitors (<Code>allow-experimental-monitors</Code>), workspace hygiene gates (<Code>enable-citc-workspace-hygiene-rule</Code>), LOAS2 credential bypass (<Code>disable-stained-loas2-creds</Code>),
-                                and CDP-based browser automation (<Code>enable-browser-subagent-v2</Code>).
+                                Toggles: <Code>enable-command-assessor</Code>, <Code>enable-command-antivirus</Code>, <Code>allow-experimental-monitors</Code>, <Code>enable-citc-workspace-hygiene-rule</Code>, <Code>disable-stained-loas2-creds</Code>, <Code>enable-browser-subagent-v2</Code>.
                             </div>
                         </Row>
-                        <Row label="Group 6: Terminal & Execution Resilience">
+                        <Row label="Cluster 6">
                             <div className="space-y-2">
                                 <div className="text-xs text-base-content/80">
-                                    Provides persistent ConPTY pseudo-terminals (<Code>enable-persistent-terminals</Code>, <Code>enable-pty</Code>), high-speed ripgrep indexing (<Code>enable-ripgrep-path-search</Code>),
-                                    non-blocking wait polling (<Code>enable-wait-tool</Code>), scheduled tasks v2 (<Code>scheduled-tasks-v2</Code>), capacity retry backoff (<Code>enable-model-capacity-exhausted-retries</Code>),
-                                    non-blocking MCP turn loading (<Code>enable-mcp-non-blocking-turn-load</Code>), and remote peer checkpoint pinning (<Code>enable-remote-agent-fastpush-pin</Code>).
+                                    Toggles: <Code>enable-persistent-terminals</Code>, <Code>enable-pty</Code>, <Code>enable-ripgrep-path-search</Code>, <Code>enable-wait-tool</Code>, <Code>scheduled-tasks-v2</Code>,
+                                    <Code>enable-model-capacity-exhausted-retries</Code>, <Code>enable-mcp-non-blocking-turn-load</Code>, <Code>enable-remote-agent-fastpush-pin</Code>.
                                 </div>
                                 <div className="text-[11px] font-mono text-base-content/65 bg-base-content/[0.04] p-2.5 rounded border border-base-content/10 whitespace-pre overflow-x-auto leading-relaxed">
-{`// Verified Transcript Proof: Scheduled Tasks v2 with Reactive TimerCondition
+{`// Observed in the author's transcripts: a schedule call with a TimerCondition
 {"step_index": 242, "type": "PLANNER_RESPONSE", "tool_calls": [{"name": "schedule", "arguments": {"DurationSeconds": 30, "Prompt": "Check if release build has completed", "TimerCondition": "00fad603.../task-233", "ExactTiming": false}}]}`}
                                 </div>
                             </div>
                         </Row>
-                        <Row label="Group 7: Cortex State & Trajectory Engine">
+                        <Row label="Cluster 7">
                             <div className="text-xs text-base-content/80 leading-relaxed">
-                                Manages filesystem snapshots and time-travel rewind (<Code>cortex-snapshot-recording</Code>, <Code>cortex-snapshot-revert</Code>), semantic past conversation vector search (<Code>enable-conversation-search-v2</Code>),
-                                dynamic model switch toasts (<Code>show-model-selection-change</Code>), AST-guided surgical component rewriting (<Code>use-component-rewrite</Code>), direct core IPC transport (<Code>use-core-direct</Code>),
-                                interactive plan mode (<Code>use-slash-plan</Code>), voice event streamers (<Code>enable-voice-activity-events</Code>), and cell-level notebook editors (<Code>cascade-enable-notebook-edit-tool</Code>, <Code>cascade-use-sed-edit-tool</Code>).
+                                Toggles: <Code>cortex-snapshot-recording</Code>, <Code>cortex-snapshot-revert</Code>, <Code>enable-conversation-search-v2</Code>, <Code>show-model-selection-change</Code>,
+                                <Code>use-component-rewrite</Code>, <Code>use-core-direct</Code>, <Code>use-slash-plan</Code>, <Code>enable-voice-activity-events</Code> (not an <Code>agy.exe</Code> experiment key; it has no known effect),
+                                <Code>cascade-enable-notebook-edit-tool</Code>, <Code>cascade-use-sed-edit-tool</Code>.
                             </div>
                         </Row>
-                        <Row label="Benchmark & Telemetry Audit">
+                        <Row label="Benchmark Script">
                             <div className="text-xs text-base-content/80 leading-relaxed">
-                                Automated headless test harness (<Code>scripts/benchmark_antigravity_lab.py</Code>) verified 100% (54/54) flag parity across CLI launch regex patterns,
-                                achieved 17,962,444 key translation ops/sec, and scanned 476 real conversation logs across 180,971 transcript lines at 459,552 lines/sec with zero regressions.
+                                <Code>scripts/benchmark_antigravity_lab.py</Code> checks whether each flag name appears as a string in <Code>agy.exe</Code> (53 of 54 do), reads the native and injected command tables,
+                                and counts tool calls in local transcripts (479 transcripts, 178,323 lines in the last stored run). It does not test what any flag does.
                             </div>
                         </Row>
                     </div>
@@ -355,7 +350,7 @@ export default function Readme() {
                 <Section id="shortcuts" index="09" label="Keyboard shortcuts">
                     <div>
                         <Row label={<><Kbd>Ctrl</Kbd> + <Kbd>K</Kbd></>}>
-                            Quick jump palette to navigate between Dashboard, Accounts, Agy Chats, and Settings. (On macOS use <Kbd>Cmd</Kbd> + <Kbd>K</Kbd>).
+                            Quick jump palette to navigate between Dashboard, Accounts, API Proxy, Traffic Logs, Token Stats, and Settings. (On macOS use <Kbd>Cmd</Kbd> + <Kbd>K</Kbd>).
                         </Row>
                         <Row label={<><Kbd>Esc</Kbd></>}>
                             Close active modals or dismiss jump palette.

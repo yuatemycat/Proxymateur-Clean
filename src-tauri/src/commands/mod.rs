@@ -1315,6 +1315,7 @@ pub async fn install_bundled_skills() -> Result<String, String> {
             include_str!("../../../skills/generative_ui/SKILL.md"),
         ),
         ("owl", include_str!("../../../skills/owl/SKILL.md")),
+        ("queue", include_str!("../../../skills/queue/SKILL.md")),
         ("swarm", include_str!("../../../skills/swarm/SKILL.md")),
     ];
 
@@ -1329,8 +1330,75 @@ pub async fn install_bundled_skills() -> Result<String, String> {
         installed_count += 1;
     }
 
+    // Auto-deploy queue stop hook script and hooks.json (Zero-Setup First-Run)
+    let queue_scripts_dir = home.join(".gemini").join("config").join("queue").join("scripts");
+    let _ = std::fs::create_dir_all(&queue_scripts_dir);
+    let queue_hook_py = queue_scripts_dir.join("queue_stop_hook.py");
+    let py_content = include_str!("../../../skills/queue/scripts/queue_stop_hook.py");
+    let _ = std::fs::write(&queue_hook_py, py_content);
+
+    let queue_hook_ps1 = queue_scripts_dir.join("queue-stop-hook.ps1");
+    let ps1_content = include_str!("../../../skills/queue/scripts/queue-stop-hook.ps1");
+    let _ = std::fs::write(&queue_hook_ps1, ps1_content);
+
+    let hook_entry = serde_json::json!({
+        "enabled": true,
+        "Stop": [
+            {
+                "type": "command",
+                "command": format!("python \"{}\"", queue_hook_py.to_string_lossy()),
+                "timeout": 10
+            }
+        ]
+    });
+
+    for hooks_dir in &[
+        home.join(".gemini").join("config"),
+        home.join(".agents"),
+        home.join(".gemini").join("antigravity-cli"),
+    ] {
+        let _ = std::fs::create_dir_all(hooks_dir);
+        let hooks_json_path = hooks_dir.join("hooks.json");
+        let mut hooks_obj: serde_json::Value = if hooks_json_path.exists() {
+            let content = std::fs::read_to_string(&hooks_json_path).unwrap_or_default();
+            serde_json::from_str(&content).unwrap_or(serde_json::json!({}))
+        } else {
+            serde_json::json!({})
+        };
+        if !hooks_obj.is_object() {
+            hooks_obj = serde_json::json!({});
+        }
+        if let Some(map) = hooks_obj.as_object_mut() {
+            map.insert("task-queue-dispatcher".to_string(), hook_entry.clone());
+            if let Ok(formatted) = serde_json::to_string_pretty(&hooks_obj) {
+                let _ = std::fs::write(&hooks_json_path, formatted);
+            }
+        }
+    }
+
+    // Ensure enable-customization-kind-hooks is enabled in settings.json
+    if let Some(settings_path) = get_cli_settings_path() {
+        if settings_path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&settings_path) {
+                if let Ok(mut val) = serde_json::from_str::<serde_json::Value>(&content) {
+                    if let Some(obj) = val.as_object_mut() {
+                        let exp = obj.entry("experiments").or_insert_with(|| serde_json::json!({}));
+                        if let Some(exp_map) = exp.as_object_mut() {
+                            exp_map.insert("enable-customization-kind-hooks".to_string(), serde_json::Value::Bool(true));
+                            exp_map.insert("enable-hook-status".to_string(), serde_json::Value::Bool(true));
+                            exp_map.insert("enable-plugins".to_string(), serde_json::Value::Bool(true));
+                        }
+                        if let Ok(formatted) = serde_json::to_string_pretty(&val) {
+                            let _ = std::fs::write(&settings_path, formatted);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Ok(format!(
-        "Successfully installed {} bundled skills (/owl, /swarm, /battle, /compact, /compaction, /benchmark, /generative_ui) to ~/.gemini/config/skills/",
+        "Successfully installed {} bundled skills (/owl, /swarm, /battle, /compact, /compaction, /benchmark, /generative_ui, /queue) to ~/.gemini/config/skills/",
         installed_count
     ))
 }
@@ -1403,6 +1471,99 @@ pub async fn get_cli_auto_compact() -> Result<Option<u32>, String> {
     } else {
         Ok(None)
     }
+}
+
+/// 获取 Antigravity CLI queuedMessages 设置 ("send-immediately" | "queue")
+#[tauri::command]
+pub async fn get_cli_queued_messages() -> Result<String, String> {
+    let settings_path = get_cli_settings_path()
+        .ok_or_else(|| "Failed to determine user home directory".to_string())?;
+
+    if !settings_path.exists() {
+        return Ok("send-immediately".to_string());
+    }
+
+    let content = std::fs::read_to_string(&settings_path)
+        .map_err(|e| format!("Failed to read CLI settings.json: {}", e))?;
+
+    let json_val: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse CLI settings.json: {}", e))?;
+
+    if let Some(mode) = json_val.get("queuedMessages").and_then(|v| v.as_str()) {
+        Ok(mode.to_string())
+    } else {
+        Ok("send-immediately".to_string())
+    }
+}
+
+/// 设置 Antigravity CLI queuedMessages ("send-immediately" | "queue")
+#[tauri::command]
+pub async fn set_cli_queued_messages(mode: String) -> Result<String, String> {
+    let settings_path = get_cli_settings_path()
+        .ok_or_else(|| "Failed to determine user home directory".to_string())?;
+
+    if let Some(parent) = settings_path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+
+    let mut json_val: serde_json::Value = if settings_path.exists() {
+        let content = std::fs::read_to_string(&settings_path)
+            .map_err(|e| format!("Failed to read CLI settings.json: {}", e))?;
+        serde_json::from_str(&content).unwrap_or(serde_json::json!({}))
+    } else {
+        serde_json::json!({})
+    };
+
+    if !json_val.is_object() {
+        json_val = serde_json::json!({});
+    }
+
+    let map = json_val.as_object_mut().unwrap();
+    map.insert("queuedMessages".to_string(), serde_json::Value::String(mode.clone()));
+
+    let formatted = serde_json::to_string_pretty(&json_val)
+        .map_err(|e| format!("Failed to serialize CLI settings.json: {}", e))?;
+
+    std::fs::write(&settings_path, formatted)
+        .map_err(|e| format!("Failed to write CLI settings.json: {}", e))?;
+
+    Ok(format!("Successfully set queuedMessages to {}", mode))
+}
+
+/// 获取当前排队任务数量与列表 (~/.gemini/config/queue/pending.json)
+#[tauri::command]
+pub async fn get_cli_queue_status() -> Result<serde_json::Value, String> {
+    let home = dirs::home_dir().ok_or_else(|| "Failed to determine user home directory".to_string())?;
+    let pending_file = home.join(".gemini").join("config").join("queue").join("pending.json");
+
+    if !pending_file.exists() {
+        return Ok(serde_json::json!({
+            "count": 0,
+            "tasks": []
+        }));
+    }
+
+    let content = std::fs::read_to_string(&pending_file).unwrap_or_default();
+    let tasks: Vec<serde_json::Value> = serde_json::from_str(&content).unwrap_or_default();
+    let count = tasks.len();
+
+    Ok(serde_json::json!({
+        "count": count,
+        "tasks": tasks
+    }))
+}
+
+/// 清空排队任务 (~/.gemini/config/queue/pending.json)
+#[tauri::command]
+pub async fn clear_cli_queue() -> Result<String, String> {
+    let home = dirs::home_dir().ok_or_else(|| "Failed to determine user home directory".to_string())?;
+    let pending_file = home.join(".gemini").join("config").join("queue").join("pending.json");
+
+    if pending_file.exists() {
+        let _ = std::fs::write(&pending_file, "[]");
+    }
+
+    Ok("Queue cleared successfully".to_string())
 }
 
 /// 安装/配置 Antigravity CLI 状态行 (Token, Ctx, tok/s StatusLine)

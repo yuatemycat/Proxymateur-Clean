@@ -662,6 +662,11 @@ pub fn run() {
 
             apply_login_launch_policy(app);
 
+            // Zero-Setup First-Run: Auto-verify and install bundled skills & queue hooks
+            tauri::async_runtime::spawn(async move {
+                let _ = commands::install_bundled_skills().await;
+            });
+
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -766,6 +771,10 @@ pub fn run() {
             commands::get_cli_auto_compact,
             commands::set_cli_statusline,
             commands::get_cli_statusline,
+            commands::get_cli_queued_messages,
+            commands::set_cli_queued_messages,
+            commands::get_cli_queue_status,
+            commands::clear_cli_queue,
             commands::check_for_updates,
             commands::check_native_update,
             commands::check_homebrew_installation,

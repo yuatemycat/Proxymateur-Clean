@@ -3,6 +3,14 @@
 > 完整版本历史记录。返回项目主页请查看 [README_ZH.md](README_ZH.md) | [English Changelog](CHANGELOG_EN.md)。
 
 *   **版本演进**:
+    *   **v1.0.2 (2026-10-24)**:
+        -   **[GUI Observability & Agent Proxy Parity] Restored API Proxy, Traffic Logs, and Token Stats**:
+            -   **API Proxy Page Restored**: Added full desktop control panel for local proxy services, listening port assignment, upstream mapping, and cloudflared tunnel integration with complete excision of legacy DEMON mode controls.
+            -   **Traffic Logs & Live Monitor**: Added full-fidelity request and response payload inspector with protocol rewrite breakdown, latency telemetry, and token tracking.
+            -   **Token Stats Dashboard**: Integrated aggregated token consumption, cache-hit efficiency analytics, and per-model interactive usage charts.
+            -   **Navigation Hubs**: Restored the `Agent Proxy` and `Observability` hubs in the sidebar and Command Palette (`Ctrl` + `K`).
+            -   **Clean OSS Parity**: Maintained absolute exclusion of PROMON HUD floating windows, DEMON injections, and prompt template extractors.
+
     *   **v1.0.1 (2026-10-19)**:
         -   **[Authentication & OAuth Governance] Restored Built-in Antigravity OAuth and Added Multi-Client Bring-Your-Own (BYO) Selection Engine**:
             -   **Canonical Built-in OAuth Credentials Restored**: Restored default Antigravity Enterprise Google OAuth client credentials (`1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com`), resolving the `OAuth failed: No OAuth clients configured` error out of the box.

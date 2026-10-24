@@ -126,6 +126,10 @@ const COMMAND_MAPPING: Record<string, { url: string; method: 'GET' | 'POST' | 'D
   'get_antigravity_args': { url: '/api/system/antigravity/args', method: 'GET' },
   'get_cli_experiments': { url: '/api/system/antigravity/experiments', method: 'GET' },
   'sync_cli_experiments': { url: '/api/system/antigravity/experiments/sync', method: 'POST' },
+  'get_cli_queued_messages': { url: '/api/system/antigravity/queued-messages', method: 'GET' },
+  'set_cli_queued_messages': { url: '/api/system/antigravity/queued-messages', method: 'POST' },
+  'get_cli_queue_status': { url: '/api/system/antigravity/queue/status', method: 'GET' },
+  'clear_cli_queue': { url: '/api/system/antigravity/queue/clear', method: 'POST' },
 
   // Cloudflared
   'cloudflared_install': { url: '/api/proxy/cloudflared/install', method: 'POST' },
