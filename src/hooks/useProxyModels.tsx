@@ -1,6 +1,7 @@
 import { useMemo, useEffect, useState } from 'react';
 import { MODEL_CONFIG, compareModelsDesc, inferModelGroup } from '../config/modelConfig';
 import { useAccountStore } from '../stores/useAccountStore';
+import { useConfigStore } from '../stores/useConfigStore';
 import { Bot, Sparkles } from 'lucide-react';
 import { request } from '../utils/request';
 
@@ -59,6 +60,7 @@ const ALIAS_TO_CANONICAL: Record<string, { id: string; name: string; group: stri
 
 export const useProxyModels = () => {
     const { accounts, fetchAccounts } = useAccountStore();
+    const { config: appConfig } = useConfigStore();
     const [canonicalFamilies, setCanonicalFamilies] = useState<CanonicalFamilyDto[]>([]);
 
     useEffect(() => {
@@ -134,6 +136,28 @@ export const useProxyModels = () => {
             }
         }
 
+        // 3. Supplement with OpenAI-compatible exposed models
+        const openaiCfg = appConfig?.proxy?.openai;
+        if (openaiCfg && openaiCfg.enabled) {
+            const exposedList = (Array.isArray(openaiCfg.exposed_models) && openaiCfg.exposed_models.length > 0)
+                ? openaiCfg.exposed_models
+                : (Array.isArray(openaiCfg.routes) ? openaiCfg.routes.map(r => r.model_id) : []);
+
+            for (const rawId of exposedList) {
+                const modelId = rawId.trim();
+                if (!modelId) continue;
+                if (!uniqueModelsMap.has(modelId)) {
+                    const group = inferModelGroup(modelId);
+                    uniqueModelsMap.set(modelId, {
+                        id: modelId,
+                        name: modelId,
+                        group,
+                        icon: <Bot size={16} className="text-emerald-400" />
+                    });
+                }
+            }
+        }
+
         return Array.from(uniqueModelsMap.values())
             .map(m => ({
                 id: m.id,
@@ -143,7 +167,7 @@ export const useProxyModels = () => {
                 icon: m.icon,
             }))
             .sort(compareModelsDesc);
-    }, [accounts, canonicalFamilies]);
+    }, [accounts, canonicalFamilies, appConfig]);
 
     return { models, canonicalFamilies };
 };

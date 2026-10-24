@@ -281,16 +281,25 @@ if (-not $useNative) {
                elseif ($resp.models) { @($resp.models | ForEach-Object { ($_.name -replace '^models/', '') }) }
                else { @() }
         $isArgonOnly = ($proxyCfg -and ($proxyCfg.gateway_routing_mode -eq 'argon_only')) -or ($modeOverride -eq 'argon_only')
-        $openaiModelIds = if (-not $isArgonOnly -and $proxyCfg.openai -and $proxyCfg.openai.enabled -and $proxyCfg.openai.routes) {
-            @($proxyCfg.openai.routes | ForEach-Object {
-                $mid = "$($_.model_id)".Trim()
+        $openaiModelIds = if (-not $isArgonOnly -and $proxyCfg.openai -and $proxyCfg.openai.enabled) {
+            $rawList = if ($proxyCfg.openai.exposed_models -and $proxyCfg.openai.exposed_models.Count -gt 0) {
+                $proxyCfg.openai.exposed_models
+            } elseif ($proxyCfg.openai.routes) {
+                $proxyCfg.openai.routes | ForEach-Object { $_.model_id }
+            } else { @() }
+            @($rawList | ForEach-Object {
+                $mid = "$_".Trim()
                 if ($mid) { $mid; "$mid-low"; "$mid-medium"; "$mid-high" }
             })
         } else { @() }
         $include = if ($isArgonOnly) { '^gemini-4-argon' } elseif ($env:PROXYMATEUR_AGY_INCLUDE) { $env:PROXYMATEUR_AGY_INCLUDE } else { '^(gemini|claude|gpt|deepseek|nemotron|openai)-' }
         # Do NOT dismiss Claude 5.5, Argon, or GPT-OSS: allow them through
         $exclude = if ($env:PROXYMATEUR_AGY_EXCLUDE) { $env:PROXYMATEUR_AGY_EXCLUDE } else { 'image|imagen|embed|tts|audio|veo|live|omni|-exp|tiered|carbon|claude-(?:opus|sonnet)-4-[0-5](?:-|$)|gpt-(?:4|3)|\*|\.x(-|$)' }
-        $models = @($ids | Where-Object { $_ -and (($_ -match $include) -or ($openaiModelIds -contains $_)) -and ($_ -notmatch $exclude) } | Sort-Object -Unique)
+        $models = @($ids | Where-Object {
+            if (-not $_) { return $false }
+            if ($openaiModelIds -contains $_) { return $true }
+            (($_ -match $include) -and ($_ -notmatch $exclude))
+        } | Sort-Object -Unique)
         
         # Always ensure Gemini 4 Argon family is included
         foreach ($m in 'gemini-4-argon', 'gemini-4-argon-high', 'gemini-4-argon-medium', 'gemini-4-argon-low') {

@@ -92,12 +92,17 @@ pub fn get_config() -> OpenAiUpstreamConfig {
 
 /// Update global OpenAI upstream configuration
 pub fn update_config(mut config: OpenAiUpstreamConfig) {
+    if config.exposed_models.is_empty() {
+        for route in &config.routes {
+            let m_id = route.model_id.trim().to_string();
+            if !m_id.is_empty() && !config.exposed_models.contains(&m_id) {
+                config.exposed_models.push(m_id);
+            }
+        }
+    }
     for route in &config.routes {
         let m_id = route.model_id.trim().to_string();
         if !m_id.is_empty() {
-            if !config.exposed_models.contains(&m_id) {
-                config.exposed_models.push(m_id.clone());
-            }
             if let Some(up) = &route.upstream_model {
                 config.model_mapping.insert(m_id, up.clone());
             }
@@ -131,12 +136,6 @@ pub fn exposed_model_ids_for(config: &OpenAiUpstreamConfig) -> Vec<String> {
         return Vec::new();
     }
     let mut models = Vec::new();
-    for r in &config.routes {
-        let trimmed = r.model_id.trim().to_string();
-        if !trimmed.is_empty() && !models.contains(&trimmed) {
-            models.push(trimmed);
-        }
-    }
     for m in &config.exposed_models {
         let trimmed = m.trim().to_string();
         if !trimmed.is_empty() && !models.contains(&trimmed) {
@@ -285,9 +284,9 @@ pub fn resolve_route(config: &OpenAiUpstreamConfig, client_model: &str) -> Optio
             .max_by_key(|(len, _)| *len)
             .map(|(_, val)| val);
 
-        // 4. Auto-detect models with explicit openai/ prefix
-        let auto_detect = if requested.starts_with("openai/") {
-            Some(requested.to_string())
+        // 4. Auto-detect models with explicit deepseek or openai/ prefix
+        let auto_detect = if requested.starts_with("deepseek") || requested.starts_with("openai/") {
+            Some(client_model.trim().trim_start_matches("models/").to_string())
         } else {
             None
         };
@@ -1434,6 +1433,8 @@ mod tests {
 
         let config = OpenAiUpstreamConfig {
             enabled: true,
+            base_url: "https://api.openai.com/v1".to_string(),
+            api_key: "test-key".to_string(),
             routes: vec![
                 OpenAiRouteConfig {
                     model_id: "gpt5".to_string(),
@@ -1552,6 +1553,7 @@ mod tests {
 
         let mut active_cfg = OpenAiUpstreamConfig {
             enabled: true,
+            base_url: "https://integrate.api.nvidia.com/v1".to_string(),
             routes: vec![
                 OpenAiRouteConfig {
                     model_id: "deepseek-v4.1-flash".to_string(),

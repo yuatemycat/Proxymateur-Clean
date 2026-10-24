@@ -499,7 +499,7 @@ pub async fn get_all_dynamic_models(
     }
 
     // 2. 获取所有自定义映射模型 (Custom - allow user to set up their own models)
-    {
+    if !only_raw_quota_models {
         let mapping = custom_mapping.read().await;
         for key in mapping.keys() {
             model_ids.insert(key.clone());
@@ -509,6 +509,7 @@ pub async fn get_all_dynamic_models(
     // 3. 注入基准线核心模型（始终可用，供 /model 选择器展示）
     if !only_raw_quota_models {
         for m in [
+            "gemini-3.1-flash-lite",
             "claude-sonnet-4-6",
             "claude-sonnet-4-6-thinking",
             "claude-opus-4-6",

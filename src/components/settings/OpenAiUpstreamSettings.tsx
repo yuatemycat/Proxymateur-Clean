@@ -98,7 +98,10 @@ export default function OpenAiUpstreamSettings({
     const { t: _t } = { t: (k: string, f?: string) => f || k };
 
     // Defensive normalization against legacy config schemas or undefined properties
-    const exposed = Array.isArray(config?.exposed_models) ? config.exposed_models : [];
+    const exposed = Array.isArray(config?.exposed_models) && config.exposed_models.length > 0
+        ? config.exposed_models
+        : (Array.isArray(config?.routes) ? config.routes.map((r) => r.model_id) : []);
+
     const safeConfig: OpenAiUpstreamConfig = {
         enabled: config?.enabled ?? DEFAULT_OPENAI_CONFIG.enabled,
         default_base_url: config?.default_base_url || (config as any)?.base_url || '',
@@ -112,7 +115,8 @@ export default function OpenAiUpstreamSettings({
                     model_id: m,
                     upstream_model: (config as any)?.model_mapping?.[m] || m
                 }))
-                : []
+                : [],
+        exposed_models: exposed
     };
 
     const [showDefaultKey, setShowDefaultKey] = useState(false);
@@ -153,7 +157,7 @@ export default function OpenAiUpstreamSettings({
         setFormBaseUrl('');
         setFormApiKey('');
         setFormTimeout('');
-        setFormExposeOnModel(false);
+        setFormExposeOnModel(true);
         setShowFormKey(false);
         setModalProbeResult(null);
         setModalOpen(true);

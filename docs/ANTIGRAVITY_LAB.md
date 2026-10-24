@@ -117,6 +117,8 @@ This repository ships skill definitions for the injected commands under `skills/
 
 ### Observed in the author's transcripts [observed]
 
+Snapshot from the stored results file (`timestamp` 2026-10-23T23:02:49Z). Transcripts keep accumulating, so a fresh run gives somewhat larger numbers.
+
 474 conversation transcripts (179,969 lines) were scanned. `invoke_subagent` was called 88 times, spawning 160 subagents (`inherit` 137, `flash` 23). These are counts of what was logged; they do not show that any toggle caused them.
 
 | Tool call | Count |
@@ -170,7 +172,7 @@ Per slash command, over the turn window the benchmark script attributes to each 
 python scripts/benchmark_antigravity_lab.py
 ```
 
-The script needs a local `agy.exe` and local Antigravity transcripts, so only the author can recompute the **[observed]** figures. The **[binary]** facts can be re-derived by anyone with the same `agy.exe` build. The full output is stored in [`docs/telemetry/antigravity_lab_benchmark_results.json`](telemetry/antigravity_lab_benchmark_results.json).
+Run it from a scratch directory if you do not want it to overwrite the stored results; it writes to `docs/telemetry/` relative to where it is run. The script needs a local `agy.exe` and local Antigravity transcripts, so only the author can recompute the **[observed]** figures. The **[binary]** facts can be re-derived by anyone with the same `agy.exe` build. The full output is stored in [`docs/telemetry/antigravity_lab_benchmark_results.json`](telemetry/antigravity_lab_benchmark_results.json).
 
 ### Transcript samples
 
