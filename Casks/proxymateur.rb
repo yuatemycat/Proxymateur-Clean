@@ -1,5 +1,5 @@
 cask "proxymateur" do
-  version "1.0.2"
+  version "1.0.3"
   sha256 :no_check
 
   name "Proxymateur"

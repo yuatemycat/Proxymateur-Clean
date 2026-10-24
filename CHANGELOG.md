@@ -3,6 +3,13 @@
 > 完整版本历史记录。返回项目主页请查看 [README_ZH.md](README_ZH.md) | [English Changelog](CHANGELOG_EN.md)。
 
 *   **版本演进**:
+    *   **v1.0.3 (2026-10-24)**:
+        -   **[OpenAI 兼容上游与网关端到端同步] 修复自定义模型在 /model 与客户端同步弹窗中正确呈现**:
+            -   **设置面板配置持久化**: 修复 `OpenAiUpstreamSettings.tsx` 中的 `safeConfig` 序列化遗漏 `exposed_models` 导致的保存丢失问题，并在添加路由时默认开启“在客户端 /model 列表显示”。
+            -   **后端动态模型自动兜底**: 更新 `openai_upstream.rs`，在 `exposed_models` 为空时自动兜底提取已配置的全部路由模型 ID，确保 `/v1/models` 准确广播自定义模型。
+            -   **网关脚本正则白名单放行**: 升级 `agy_gateway.ps1`、`antigravity_gateway.ps1` 与 `gemini_gateway.ps1`，允许配置的 OpenAI 兼容模型绕过 Google Gemini 模型连字符与排除正则（支持自定义命名与空格）。
+            -   **客户端同步面板集成**: 扩展 `useProxyModels.tsx`，将已暴露的 OpenAI 兼容上游模型同步注入 CliSync、OpenCodeSync、HermesSync、DroidSync 与 OpenClawSync 弹窗。
+
     *   **v1.0.2 (2026-10-24)**:
         -   **[GUI Observability & Agent Proxy Parity] Restored API Proxy, Traffic Logs, and Token Stats**:
             -   **API Proxy Page Restored**: Added full desktop control panel for local proxy services, listening port assignment, upstream mapping, and cloudflared tunnel integration with complete excision of legacy DEMON mode controls.

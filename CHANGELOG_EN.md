@@ -3,6 +3,13 @@
 > Complete version history for Antigravity Tools. Return to project home at [README.md](README.md).
 
 *   **Version History**:
+    *   **v1.0.3 (2026-10-24)**:
+        -   **[OpenAI-Compatible Upstream & Gateway Synchronization] End-to-End Propagation of Custom Models to /model Picker and Client Sync**:
+            -   **Settings UI Persistence**: Fixed `safeConfig` state serialization in `OpenAiUpstreamSettings.tsx` to preserve `exposed_models`, initialized fallback lists from route IDs, and defaulted "Show in client /model picker" to enabled.
+            -   **Backend Dynamic Model Fallback**: Updated `openai_upstream.rs` to automatically seed configured routes into `exposed_models` when empty or uninitialized, ensuring custom models are advertised over `/v1/models`.
+            -   **Gateway Regex Exclusions Bypassed**: Updated `agy_gateway.ps1`, `antigravity_gateway.ps1`, and `gemini_gateway.ps1` so configured OpenAI-compatible model routes bypass Google Gemini regex restrictions (including arbitrary names, custom casing, and spaces).
+            -   **Client Sync Modal Integration**: Extended `useProxyModels.tsx` to surface custom OpenAI-compatible models across CliSync, OpenCodeSync, HermesSync, DroidSync, and OpenClawSync modals.
+
     *   **v1.0.2 (2026-10-24)**:
         -   **[GUI Observability & Agent Proxy Parity] Restored API Proxy, Traffic Logs, and Token Stats**:
             -   **API Proxy Page Restored**: Added full desktop control panel for local proxy services, listening port assignment, upstream mapping, and cloudflared tunnel integration with complete excision of legacy DEMON mode controls.
