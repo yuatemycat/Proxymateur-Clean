@@ -3,6 +3,14 @@
 > Complete version history for Antigravity Tools. Return to project home at [README.md](README.md).
 
 *   **Version History**:
+    *   **v1.0.4 (2026-10-24)**:
+        -   **[Model Governance & Visibility Parity] Fix Ghost Models and Prevent Disabled or Deleted Routes from Showing in /model Picker**:
+            -   **Excised Synthetic Reasoning Variants**: Removed automatic `-high`, `-medium`, and `-low` reasoning tier generation from `openai_upstream.rs` and gateway launchers, eliminating ghost models that could not be deleted or disabled.
+            -   **Atomic Route Validation & Cleanup**: Enforced route existence validation in `update_config` and `exposed_model_ids_for`, pruning deleted route IDs from `exposed_models` and cleanly rebuilding `model_mapping`.
+            -   **Empty Exposed List Semantics**: Fixed logic across `OpenAiUpstreamSettings.tsx`, `useProxyModels.tsx`, and gateway launchers so an empty exposed list `[]` correctly displays 0 models instead of falling back to all routes.
+            -   **Strict Gateway Whitelist**: Removed `deepseek|nemotron|openai` from the native model regex whitelist in `agy_gateway.ps1`, `antigravity_gateway.ps1`, and `gemini_gateway.ps1`, ensuring custom models only show up when explicitly checked in settings.
+            -   **Disabled Account Quota Isolation**: Added `disabled` and `proxy_disabled` validation in `token_manager.rs` to stop disabled or validation-blocked accounts from injecting models into `/v1/models`.
+
     *   **v1.0.3 (2026-10-24)**:
         -   **[OpenAI-Compatible Upstream & Gateway Synchronization] End-to-End Propagation of Custom Models to /model Picker and Client Sync**:
             -   **Settings UI Persistence**: Fixed `safeConfig` state serialization in `OpenAiUpstreamSettings.tsx` to preserve `exposed_models`, initialized fallback lists from route IDs, and defaulted "Show in client /model picker" to enabled.

@@ -1008,6 +1008,22 @@ impl TokenManager {
     fn get_available_models_from_json(account_path: &PathBuf) -> Option<HashSet<String>> {
         let content = std::fs::read_to_string(account_path).ok()?;
         let account: serde_json::Value = serde_json::from_str(&content).ok()?;
+        let is_disabled = account
+            .get("disabled")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let is_proxy_disabled = account
+            .get("proxy_disabled")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let disabled_reason = account
+            .get("proxy_disabled_reason")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        if is_disabled || (is_proxy_disabled && disabled_reason != "quota_protection") {
+            return None;
+        }
+
         let models = account.get("quota")?.get("models")?.as_array()?;
         let mut result = HashSet::new();
         for model in models {
@@ -4157,18 +4173,21 @@ impl TokenManager {
         for entry in self.tokens.iter() {
             let token = entry.value();
 
-            // Keep the raw quota model IDs for /v1/models discovery. `model_quotas`
-            // intentionally stores normalized protection buckets (e.g. gemini-3-flash),
-            // but clients need concrete usable IDs such as gemini-3-flash-agent.
+            // Skip accounts that have been temporarily blocked or invalidated
+            if token.validation_blocked {
+                continue;
+            }
+
+            // Keep the raw quota model IDs for /v1/models discovery only from active, valid accounts
             if let Some(raw_models) = Self::get_available_models_from_json(&token.account_path) {
                 for model_id in raw_models {
                     all_models.insert(model_id);
                 }
-            }
 
-            // Also keep normalized bucket IDs for existing quota/protection behavior.
-            for model_id in token.model_quotas.keys() {
-                all_models.insert(model_id.clone());
+                // Also keep normalized bucket IDs for existing quota/protection behavior
+                for model_id in token.model_quotas.keys() {
+                    all_models.insert(model_id.clone());
+                }
             }
         }
         all_models

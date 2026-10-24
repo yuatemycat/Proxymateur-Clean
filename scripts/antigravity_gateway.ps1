@@ -85,17 +85,15 @@ if (-not $useNative) {
                else { @() }
         $isArgonOnly = ($proxyCfg.gateway_routing_mode -eq 'argon_only') -or ($modeOverride -eq 'argon_only')
         $openaiModelIds = if (-not $isArgonOnly -and $proxyCfg.openai -and $proxyCfg.openai.enabled) {
-            $rawList = if ($proxyCfg.openai.exposed_models -and $proxyCfg.openai.exposed_models.Count -gt 0) {
-                $proxyCfg.openai.exposed_models
+            $validRoutes = if ($proxyCfg.openai.routes) { @($proxyCfg.openai.routes | ForEach-Object { "$($_.model_id)".Trim() }) } else { @() }
+            $rawList = if ($null -ne $proxyCfg.openai.exposed_models) {
+                @($proxyCfg.openai.exposed_models | Where-Object { $validRoutes -contains "$_".Trim() })
             } elseif ($proxyCfg.openai.routes) {
-                $proxyCfg.openai.routes | ForEach-Object { $_.model_id }
+                $validRoutes
             } else { @() }
-            @($rawList | ForEach-Object {
-                $mid = "$_".Trim()
-                if ($mid) { $mid; "$mid-low"; "$mid-medium"; "$mid-high" }
-            })
+            @($rawList | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
         } else { @() }
-        $include = if ($isArgonOnly) { '^gemini-4-argon' } elseif ($env:PROXYMATEUR_AGY_INCLUDE) { $env:PROXYMATEUR_AGY_INCLUDE } else { '^(gemini|claude|gpt|deepseek|nemotron|openai)-' }
+        $include = if ($isArgonOnly) { '^gemini-4-argon' } elseif ($env:PROXYMATEUR_AGY_INCLUDE) { $env:PROXYMATEUR_AGY_INCLUDE } else { '^(gemini|claude|gpt)-' }
         $exclude = if ($env:PROXYMATEUR_AGY_EXCLUDE) { $env:PROXYMATEUR_AGY_EXCLUDE } else { 'imagen|embed|tts|audio|veo|live|omni|-exp|tiered|\*|\.x(-|$)' }
         $models = @($ids | Where-Object {
             if (-not $_) { return $false }

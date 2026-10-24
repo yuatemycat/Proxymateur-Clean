@@ -98,9 +98,21 @@ export default function OpenAiUpstreamSettings({
     const { t: _t } = { t: (k: string, f?: string) => f || k };
 
     // Defensive normalization against legacy config schemas or undefined properties
-    const exposed = Array.isArray(config?.exposed_models) && config.exposed_models.length > 0
-        ? config.exposed_models
-        : (Array.isArray(config?.routes) ? config.routes.map((r) => r.model_id) : []);
+    const rawRoutes = Array.isArray(config?.routes)
+        ? config.routes
+        : (Array.isArray((config as any)?.exposed_models) && (config as any).exposed_models.length > 0)
+            ? (config as any).exposed_models.map((m: string) => ({
+                model_id: m,
+                upstream_model: (config as any)?.model_mapping?.[m] || m
+            }))
+            : [];
+    const validRouteIds = new Set(rawRoutes.map((r: any) => r.model_id));
+
+    // If exposed_models is explicitly defined (even as []), respect user selection and prune deleted routes;
+    // only fall back to all routes if exposed_models is undefined/null (legacy uninitialized config).
+    const exposed = Array.isArray(config?.exposed_models)
+        ? config.exposed_models.filter((m) => validRouteIds.has(m))
+        : rawRoutes.map((r: any) => r.model_id);
 
     const safeConfig: OpenAiUpstreamConfig = {
         enabled: config?.enabled ?? DEFAULT_OPENAI_CONFIG.enabled,
@@ -108,14 +120,7 @@ export default function OpenAiUpstreamSettings({
         default_api_key: config?.default_api_key || (config as any)?.api_key || '',
         default_timeout_secs: config?.default_timeout_secs ?? 120,
         auto_route_prefix: config?.auto_route_prefix ?? 'openai/',
-        routes: Array.isArray(config?.routes)
-            ? config.routes
-            : (Array.isArray((config as any)?.exposed_models) && (config as any).exposed_models.length > 0)
-                ? (config as any).exposed_models.map((m: string) => ({
-                    model_id: m,
-                    upstream_model: (config as any)?.model_mapping?.[m] || m
-                }))
-                : [],
+        routes: rawRoutes,
         exposed_models: exposed
     };
 
@@ -147,7 +152,8 @@ export default function OpenAiUpstreamSettings({
     const toggleExposed = (model: string, checked: boolean) => {
         const current = safeConfig.exposed_models || [];
         const next = checked ? [...current, model] : current.filter((m) => m !== model);
-        updateConfig({ exposed_models: Array.from(new Set(next)) });
+        const validIds = new Set(safeConfig.routes.map((r) => r.model_id));
+        updateConfig({ exposed_models: Array.from(new Set(next)).filter((m) => validIds.has(m)) });
     };
 
     const handleOpenAdd = () => {
@@ -215,8 +221,9 @@ export default function OpenAiUpstreamSettings({
             currentRoutes.push(newRoute);
         }
 
+        const nextValidIds = new Set(currentRoutes.map((r) => r.model_id));
         let nextExposed = (safeConfig.exposed_models || []).filter(
-            (m) => m !== trimmedModelId && (!prevModelId || m !== prevModelId)
+            (m) => nextValidIds.has(m) && m !== trimmedModelId && (!prevModelId || m !== prevModelId)
         );
         if (formExposeOnModel) {
             nextExposed = [...nextExposed, trimmedModelId];
@@ -231,7 +238,8 @@ export default function OpenAiUpstreamSettings({
         const route = safeConfig.routes[index];
         if (!route) return;
         const nextRoutes = safeConfig.routes.filter((_, idx) => idx !== index);
-        const nextExposed = (safeConfig.exposed_models || []).filter((m) => m !== route.model_id);
+        const nextValidIds = new Set(nextRoutes.map((r) => r.model_id));
+        const nextExposed = (safeConfig.exposed_models || []).filter((m) => nextValidIds.has(m));
         updateConfig({ routes: nextRoutes, exposed_models: nextExposed });
         showToast(`Removed model "${route.model_id}"`, 'info');
     };

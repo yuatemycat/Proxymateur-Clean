@@ -3,6 +3,14 @@
 > 完整版本历史记录。返回项目主页请查看 [README_ZH.md](README_ZH.md) | [English Changelog](CHANGELOG_EN.md)。
 
 *   **版本演进**:
+    *   **v1.0.4 (2026-10-24)**:
+        -   **[模型治理与可见性同步] 彻底修复已禁用与已删除自定义/配额模型仍在 /model 选择器中残留展示的问题**:
+            -   **移除合成推理变体 (-high/-low/-medium)**: 移除 `openai_upstream.rs` 与网关启动脚本中对 DeepSeek / Nemotron 等模型的自动推理档位合成逻辑，避免在选择器中生成用户未配置且无法禁用/删除的幽灵模型条目。
+            -   **已删除模型与映射原子清理**: 在 `openai_upstream.rs` 的 `update_config` 与 `exposed_model_ids_for` 中加入有效路由校验，自动剔除 `exposed_models` 中已删除的路由 ID 并重建 `model_mapping`，防止旧映射残留。
+            -   **空暴露列表语义修复**: 修复 `OpenAiUpstreamSettings.tsx`、`useProxyModels.tsx` 与网关脚本中空数组强制回退到全选的逻辑，确保用户取消勾选全部模型时能正确呈现 0 个暴露模型。
+            -   **网关脚本白名单收敛**: 从 `agy_gateway.ps1`、`antigravity_gateway.ps1` 与 `gemini_gateway.ps1` 的原生模型默认白名单中剥离 `deepseek|nemotron|openai`，自定义模型仅在被用户显式勾选启用时方可进入 `/model` 列表。
+            -   **停用/禁用账号配额模型隔离**: 在 `token_manager.rs` 中为动态模型收集函数补充 `disabled` 与 `proxy_disabled` 状态校验，防止被手动禁用或校验锁定的账号向客户端广播模型。
+
     *   **v1.0.3 (2026-10-24)**:
         -   **[OpenAI 兼容上游与网关端到端同步] 修复自定义模型在 /model 与客户端同步弹窗中正确呈现**:
             -   **设置面板配置持久化**: 修复 `OpenAiUpstreamSettings.tsx` 中的 `safeConfig` 序列化遗漏 `exposed_models` 导致的保存丢失问题，并在添加路由时默认开启“在客户端 /model 列表显示”。

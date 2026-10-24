@@ -1,6 +1,6 @@
 [package]
 name = "proxymateur"
-version = "1.0.3"
+version = "1.0.4"
 description = "Proxymateur"
 authors = ["Yuatemycat"]
 license = "CC-BY-NC-SA-4.0"

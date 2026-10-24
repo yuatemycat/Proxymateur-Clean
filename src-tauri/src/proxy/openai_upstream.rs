@@ -92,14 +92,18 @@ pub fn get_config() -> OpenAiUpstreamConfig {
 
 /// Update global OpenAI upstream configuration
 pub fn update_config(mut config: OpenAiUpstreamConfig) {
-    if config.exposed_models.is_empty() {
-        for route in &config.routes {
-            let m_id = route.model_id.trim().to_string();
-            if !m_id.is_empty() && !config.exposed_models.contains(&m_id) {
-                config.exposed_models.push(m_id);
-            }
-        }
-    }
+    let valid_route_ids: std::collections::HashSet<String> = config
+        .routes
+        .iter()
+        .map(|r| r.model_id.trim().to_string())
+        .filter(|id| !id.is_empty())
+        .collect();
+
+    // Prune exposed_models so deleted routes are never retained
+    config.exposed_models.retain(|m| valid_route_ids.contains(m.trim()));
+
+    // Rebuild model_mapping cleanly from active routes only (never leak deleted routes)
+    config.model_mapping.clear();
     for route in &config.routes {
         let m_id = route.model_id.trim().to_string();
         if !m_id.is_empty() {
@@ -135,42 +139,18 @@ pub fn exposed_model_ids_for(config: &OpenAiUpstreamConfig) -> Vec<String> {
     if !config.enabled {
         return Vec::new();
     }
+    let valid_route_ids: std::collections::HashSet<String> = config
+        .routes
+        .iter()
+        .map(|r| r.model_id.trim().to_string())
+        .filter(|id| !id.is_empty())
+        .collect();
+
     let mut models = Vec::new();
     for m in &config.exposed_models {
         let trimmed = m.trim().to_string();
-        if !trimmed.is_empty() && !models.contains(&trimmed) {
+        if !trimmed.is_empty() && valid_route_ids.contains(&trimmed) && !models.contains(&trimmed) {
             models.push(trimmed);
-        }
-    }
-
-    // Syndicate reasoning effort variants (-low, -medium, -high) for DeepSeek & reasoning models
-    // so agy.exe Bubbletea TUI collapses them into a single row with the ←/→ Effort slider
-    let mut effort_variants = Vec::new();
-    for m in &models {
-        let lower = m.to_lowercase();
-        if (lower.contains("deepseek")
-            || lower.contains("reason")
-            || lower.contains("nemotron")
-            || lower.contains("step")
-            || lower.contains("kimi")
-            || lower.contains("o1")
-            || lower.contains("o3")
-            || lower.contains("o4")
-            || lower.contains("gpt-5")
-            || lower.contains("qwq"))
-            && !lower.ends_with("-low")
-            && !lower.ends_with("-medium")
-            && !lower.ends_with("-high")
-            && !lower.ends_with("-effort")
-        {
-            effort_variants.push(format!("{}-low", m));
-            effort_variants.push(format!("{}-medium", m));
-            effort_variants.push(format!("{}-high", m));
-        }
-    }
-    for ev in effort_variants {
-        if !models.contains(&ev) {
-            models.push(ev);
         }
     }
 
@@ -1574,12 +1554,28 @@ mod tests {
         // Direct routing still resolves configured routes when explicitly requested
         assert!(resolve_route(&active_cfg, "muse-glimmer-30b").is_some());
 
-        // Choosing a model in exposed_models exposes only that model (and effort variants if reasoning)
+        // Choosing a model in exposed_models exposes only that model
         active_cfg.exposed_models = vec!["muse-glimmer-30b".to_string()];
         assert_eq!(
             exposed_model_ids_for(&active_cfg),
             vec!["muse-glimmer-30b".to_string()]
         );
+
+        // Deleted or unconfigured routes in exposed_models are strictly filtered out
+        active_cfg.exposed_models = vec![
+            "muse-glimmer-30b".to_string(),
+            "deleted-or-ghost-model".to_string(),
+        ];
+        assert_eq!(
+            exposed_model_ids_for(&active_cfg),
+            vec!["muse-glimmer-30b".to_string()]
+        );
+
+        // update_config cleans up stale exposed_models and synchronizes model_mapping
+        update_config(active_cfg);
+        let current = get_config();
+        assert_eq!(current.exposed_models, vec!["muse-glimmer-30b".to_string()]);
+        assert_eq!(current.model_mapping.len(), 2);
     }
 
     /// Live network test: `cargo test ... -- --ignored` with NVIDIA_API_KEY set.

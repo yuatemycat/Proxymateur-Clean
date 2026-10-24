@@ -139,8 +139,9 @@ export const useProxyModels = () => {
         // 3. Supplement with OpenAI-compatible exposed models
         const openaiCfg = appConfig?.proxy?.openai;
         if (openaiCfg && openaiCfg.enabled) {
-            const exposedList = (Array.isArray(openaiCfg.exposed_models) && openaiCfg.exposed_models.length > 0)
-                ? openaiCfg.exposed_models
+            const validRouteIds = new Set((openaiCfg.routes || []).map(r => r.model_id));
+            const exposedList = Array.isArray(openaiCfg.exposed_models)
+                ? openaiCfg.exposed_models.filter(m => validRouteIds.has(m))
                 : (Array.isArray(openaiCfg.routes) ? openaiCfg.routes.map(r => r.model_id) : []);
 
             for (const rawId of exposedList) {
