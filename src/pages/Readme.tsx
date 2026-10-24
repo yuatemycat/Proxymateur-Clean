@@ -200,7 +200,7 @@ export default function Readme() {
                     <P>
                         Located in <InlineLink to="/settings">Settings</InlineLink>, on the Advanced tab. Provides toggles for 54
                         Antigravity experiment flags, grouped into 7 clusters in this UI. 53 of the 54 names appear as strings in{' '}
-                        <Code>agy.exe</Code>; none has been confirmed by switching it on and off. The project README lists the <Code>agy.exe</Code> function that reads each toggle. Changes sync directly to{' '}
+                        <Code>agy.exe</Code>; none has been confirmed by switching it on and off. <Code>docs/ANTIGRAVITY_LAB.md</Code> in the repository lists the <Code>agy.exe</Code> function that reads each toggle. Changes sync directly to{' '}
                         <Code>~/.gemini/antigravity-cli/settings.json</Code> and are parsed by the CLI launch gateway.
                     </P>
                     <div>
