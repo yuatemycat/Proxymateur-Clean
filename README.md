@@ -69,7 +69,7 @@ flowchart TD
 
     subgraph Storage ["Local Storage & Config"]
         DB[("SQLite Database<br/>~/.proxymateur/proxy_logs.db<br/>(accounts, tokens, traffic logs)")]
-        Settings["CLI Settings File<br/>~/.gemini/antigravity-cli/settings.json<br/>(54 Antigravity Lab experiment flags)"]
+        Settings["CLI Settings File<br/>~/.gemini/antigravity-cli/settings.json<br/>(Cleaned canonical Antigravity Lab flags)"]
     end
 
     subgraph Upstreams ["Upstream Execution Targets"]
@@ -213,82 +213,94 @@ API details are in [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md).
 
 ## Antigravity Lab (experiment flags)
 
-**Settings → Advanced → Antigravity Lab** has toggles for 54 Antigravity experiment flags. Your choices are written to `~/.gemini/antigravity-cli/settings.json`, where the CLI reads them.
+**Settings → Advanced → Antigravity Lab** controls Antigravity's experimental logic gates in `~/.gemini/antigravity-cli/settings.json`.
 
-### Empirical Runtime Verification & Binary Proofs
+Controlled A/B testing and x86_64 disassembly of `agy.exe` (207MB Go binary) establish that these flags are **not static prompt decorators** (single-turn prompts receive identical 60KB system instructions regardless of flag state). Instead, they are **compiled event-driven runtime gates** in Go that sleep until their specific execution event triggers.
 
-Controlled A/B testing and x86_64 disassembly of `agy.exe` (207MB Go binary) establish that Antigravity experiment flags are **not static prompt decorators** (a single-turn prompt generates an identical 60KB system instruction regardless of flag state). Instead, they are **compiled event-driven runtime logic gates** in Go that sleep until their specific execution event triggers:
+Empirical verification reveals that **9 mission-critical flags** govern the core superpowers of the agent runtime. The remaining canonical flags handle secondary conveniences and are summarized below, while 17 dead imposter keys and 34 redundant `snake_case` duplicates have been purged.
+
+---
+
+### The Top 9 Mission-Critical Runtime Flags
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                 THE TOP 9 MISSION-CRITICAL RUNTIME FLAGS                               │
 ├─────────────────────────────────────┬──────────────────────────────────────────┬───────────────────────┤
-│ Flag Key                            │ Go Function & Disassembly Entrypoint     │ Operational Role      │
+│ Flag Key                            │ Go Entrypoint & Machine Instruction      │ Operational Superpower│
 ├─────────────────────────────────────┼──────────────────────────────────────────┼───────────────────────┤
-│ disable-teamwork-forced-flash-model │ InvokeSubagentTool.launch (0x14232a819)  │ Prevents Flash forced │
-│                                     │                                          │ downgrade on subagent │
+│ disable-teamwork-forced-flash-model │ InvokeSubagentTool.launch (0x14232a819)  │ Prevents forced Flash │
+│                                     │ Bypass jmp to `mov [rdx+4Ch], 3`         │ downgrade on subagents│
 │ enable-programmatic-tools           │ cortex/core/tools.NewRunWorkflowTool     │ On-the-fly ephemeral  │
-│                                     │ (0x142389ed4)                            │ tool & script synthesis│
+│                                     │ Tests flag at 0x142389ed4                │ tool & script synth   │
 │ enable-battle-mode                  │ (*CascadeManager).ValidateBattleMode     │ Colosseum adversarial │
-│                                     │ (0x1424d2718)                            │ subagent arena gate   │
+│                                     │ Evaluates gate at 0x1424d2718            │ subagent arena gate   │
 │ enable-fork-with-subagents          │ (*CascadeManager).allowForkWithSubagents │ Isolated git worktree │
-│                                     │ (0x1424ebddb)                            │ subagent sandboxing   │
+│                                     │ Evaluates gate at 0x1424ebddb            │ subagent sandboxing   │
 │ enable-command-assessor             │ cortex/config.CommandAssessorEnabled     │ DeepMind neural shell │
-│                                     │ (0x1418594d3)                            │ safety classifier     │
+│                                     │ Evaluates gate at 0x1418594d3            │ safety classifier     │
 │ enable-command-antivirus            │ cortex/config.augmentConversationalConfig│ Destructive shell cmd │
-│                                     │ (0x141857aa5)                            │ heuristic scanner     │
+│                                     │ Sets `byte ptr [rax+28h] = 1` (0x141857) │ heuristic scanner     │
 │ enable-compact-slash-command        │ cortex/slashcommands.init (0x14215e9bf)  │ Unlocks /compact &    │
 │                                     │ prehooks.NewContextSummaryHook           │ context pruner hook   │
 │ enable-cost-accumulator             │ cortex/config.augmentConversationalConfig│ Multi-turn token &    │
-│                                     │ (0x1423d7644)                            │ cache cost tracker    │
+│                                     │ Hooks accumulator at 0x1423d7644         │ cache cost tracker    │
 │ jetski-autonomous-mode              │ cortex.supportedExperiments [9]          │ Suppresses interactive│
-│                                     │ (0x14c0d01f0 -> 0x14c141a08)             │ pauses for hands-free │
+│                                     │ Table entry at 0x14c141a08               │ pauses for hands-free │
 └─────────────────────────────────────┴──────────────────────────────────────────┴───────────────────────┘
 ```
 
 #### Detailed Binary Proofs & Trigger Mechanics
 
 1. **Subagent Model Preservation (`disable-teamwork-forced-flash-model`)**
-   - *Binary Proof:* At `0x14232a819` (`InvokeSubagentTool.launch`) and `0x14237a2b8` (`InvokeSubagentHandler.Handle`), the binary queries the flag via `runtime.mapaccess2_faststr`. If `false` or missing, execution jumps to `0x14232a87f` and executes `mov dword ptr [rdx+4Ch], 3` (hardcoded internal enum for Gemini Flash). When `true`, it bypasses the assignment, allowing child agents to retain Pro, Ultra, or Opus tiers.
-   - *Telemetry Proof:* 147 of 170 spawned subagents across 472 session transcripts retained their parent tier instead of being forced to Flash.
+   - **Machine Proof:** In `InvokeSubagentTool.launch` (`0x14232a819`), if false or missing, execution branches to `0x14232a87f`, running `mov dword ptr [rdx+4Ch], 3` (hardcoding the enum for Gemini Flash). When `true`, this jump is bypassed, allowing subagents to inherit Pro, Ultra, or Opus tiers.
+   - **Observed Telemetry:** 147 of 170 spawned subagents across 472 session transcripts retained their parent tier instead of being forced to Flash.
 
 2. **On-The-Fly Tool Synthesis (`enable-programmatic-tools`)**
-   - *Binary Proof:* At `0x142389ed4`, `runtime.mapaccess2_faststr` tests `"enable-programmatic-tools"`. If false (`bl == 0`), execution jumps to `0x142389f99`, skipping tool instantiation. When `true`, it loads the `NewRunWorkflowTool` descriptor at `0x14a51e948` and injects `run_workflow` into the session.
-   - *Telemetry Proof:* Attributed across 11 benchmark simulation runs for headless script execution and frame profiling.
+   - **Machine Proof:** In `cortex/core/tools.NewRunWorkflowTool` (`0x142389ed4`), map lookup tests the flag. If false (`bl == 0`), execution jumps to `0x142389f99`, skipping tool instantiation. When `true`, it registers `NewRunWorkflowTool` (`0x14a51e948`), injecting `run_workflow` for ad-hoc script synthesis and simulations.
 
 3. **Colosseum Battle Arena (`enable-battle-mode`)**
-   - *Binary Proof:* At `0x1424d2718`, `(*CascadeManager).ValidateBattleMode` loads `"enable-battle-mode"` and executes `call rdx` (IsExperimentEnabled). If not enabled, the method rejects execution with an unauthorized battle session error.
-   - *Telemetry Proof:* Coordinates two rival subagents in an adversarial arena to debate implementations and benchmark code.
+   - **Machine Proof:** In `(*CascadeManager).ValidateBattleMode` (`0x1424d2718`), queries `IsExperimentEnabled("enable-battle-mode")`. Without this flag, battle mode requests are rejected with an authorization error before subagents can be initialized.
 
 4. **Git Worktree Sandboxing (`enable-fork-with-subagents`)**
-   - *Binary Proof:* At `0x1424ebddb`, `(*CascadeManager).allowForkWithSubagents` queries `"enable-fork-with-subagents"`. If missing or unconfigured, it returns 0 (`xor eax, eax`). When `true`, `invoke_subagent` calls specifying `Workspace: "branch"` provision isolated git worktrees instead of mutating the parent tree.
+   - **Machine Proof:** In `(*CascadeManager).allowForkWithSubagents` (`0x1424ebddb`), returns 0 (`xor eax, eax`) unless enabled. When `true`, `invoke_subagent` calls with `Workspace: "branch"` provision isolated git worktrees rather than modifying the main branch.
 
 5. **DeepMind Safety Classifier (`enable-command-assessor`)**
-   - *Binary Proof:* At `0x1418594d3`, `cortex/config.CommandAssessorEnabled` tests `"enable-command-assessor"`. If `0`, it immediately exits with `xor eax, eax` (disabled). If `1`, it verifies `!IsExperimentEnabled("disable-command-assessor")` at `0x1418594f8`. Gates terminal commands against DeepMind's safety boundary model.
+   - **Machine Proof:** In `cortex/config.CommandAssessorEnabled` (`0x1418594d3`), evaluates `"enable-command-assessor"`. If 0, returns 0 immediately. If 1, checks `!IsExperimentEnabled("disable-command-assessor")`. Gates proposed shell commands against DeepMind's safety boundary model.
 
-6. **Destructive Command Interceptor (`enable-command-antivirus`)**
-   - *Binary Proof:* At `0x141857aa5`, `augmentConversationalConfigWithExperiment` evaluates `"enable-command-antivirus"`. If `true`, it calls `0x141855f80` to initialize the heuristic scanner and executes `mov byte ptr [rax+28h], 1` (marking Antivirus Active). Intercepts dangerous patterns (`rm -rf /`, fork bombs, drop tables) prior to execution by `run_command`.
+6. **Destructive Command Scanner (`enable-command-antivirus`)**
+   - **Machine Proof:** In `augmentConversationalConfigWithExperiment` (`0x141857aa5`), when `true`, calls `0x141855f80` to initialize the heuristic scanner and sets `mov byte ptr [rax+28h], 1` (marking Antivirus Active). Scans proposed shell commands to block destructive operations (`rm -rf /`, recursive deletes, fork bombs).
 
 7. **Context Compactor & Summary Prehook (`enable-compact-slash-command`)**
-   - *Binary Proof:* Referenced at both `0x14215e9bf` (`cortex/slashcommands.init.func2`) and `0x14224d0ab` (`prehooks.NewContextSummaryHook`). When enabled, registers the `/compact` command and hooks token consumption prehooks to prune chat histories crossing window thresholds.
+   - **Machine Proof:** In `cortex/slashcommands.init.func2` (`0x14215e9bf`) and `prehooks.NewContextSummaryHook` (`0x14224d0ab`). When true, registers the `/compact` command and hooks context summary evaluation to prune chat history when crossing token limits.
 
 8. **Token Cost & Cache Accumulator (`enable-cost-accumulator`)**
-   - *Binary Proof:* Evaluated at `0x1423d7644` in `augmentConversationalConfigWithExperiment` and `0x1424ebcdb` in `CascadeManager`. If missing, branches to `0x1423d7725` (bypassing tracking). When active, monitors exact multi-turn token metrics and prompt caching hits.
-   - *Telemetry Proof:* Corroborated in `~/.proxymateur/proxy_logs.db` with 147,004,268 input tokens and 124,001,721 cached prompt tokens tracked.
+   - **Machine Proof:** Evaluated in `augmentConversationalConfigWithExperiment` (`0x1423d7644`) and `CascadeManager` (`0x1424ebcdb`). Tracks exact multi-turn token metrics and prompt caching hits (corroborated in `proxy_logs.db` with 147,004,268 input tokens and 124,001,721 cached prompt tokens tracked).
 
 9. **Hands-Free Autonomous Execution (`jetski-autonomous-mode`)**
-   - *Binary Proof:* Entry [9] in the `cortex.supportedExperiments` internal table at `.data` VA `0x14c141a08` (raw offset `0xc140468`), controlled by the slice header at `.data` VA `0x14c0d01f0` (raw `0xc0cebf0`, len 22). When present in `settings.json`, `augmentConversationalConfigWithExperiment` injects autonomous execution flags into the session configuration, suppressing confirmation stops.
+   - **Machine Proof:** Entry [9] in the `cortex.supportedExperiments` table (`0x14c141a08`), managed by slice header `0x14c0d01f0` (len 22). When set in `settings.json`, injects autonomous execution flags into the session configuration, suppressing confirmation stops for continuous operation.
 
-### Cleaned Canonical Flags vs. Dead Weight
+---
 
-Configuration audits revealed that `agy.exe` exclusively parses `kebab-case` keys. The settings have been pruned:
-- **Pruned 17 dead & imposter flags:** `enable-voice-activity-events` (proven to be an unrelated field from Google Cloud Speech Protobuf), `enable-citc-workspace-hygiene-rule` (Google-internal CitC rule), `scheduled-tasks-v2`, `sidecar-iframe-prewarm`, and unreferenced `enable-customization-kind-*` placeholders (subsumed by `enable-plugins`).
-- **Pruned 34 redundant `snake_case` aliases:** Removed duplicate keys (`disable_teamwork_forced_flash_model`, `enable_subagent_hub`, etc.) that bloated `settings.json`.
-- **42 verified canonical flags retained:** Actively mapped to named Go functions in the `agy.exe` symbol table.
+### Other Verified Flags (Summarized)
 
-The extra slash commands (`/swarm`, `/owl`, `/battle`, `/benchmark`, `/generative_ui`, `/compact` and a few aliases) come from `scripts/auto_patch_agy.py`, which **patches `agy.exe` itself** to add them. That edits Google's program. It can break when Antigravity updates, and you do it at your own risk, so keep a backup. Skill definitions for them are in [`skills/`](skills/).
+The remaining 33 valid canonical flags handle secondary environment features and background tooling:
 
-The evidence, with the function names, the command tables and the usage counts, is in **[docs/ANTIGRAVITY_LAB.md](docs/ANTIGRAVITY_LAB.md)**. It separates facts read from the binary from counts taken from the author's own transcripts, and it says where it can't tell.
+- **Upstream Resilience:** `enable-model-capacity-exhausted-retries` (exponential backoff loop in `modelapiccpa` on Google 429/503 errors).
+- **Terminal Persistence:** `enable-persistent-terminals` & `enable-pty` (upgrades `run_command` from ephemeral child processes to stateful Windows ConPTY sessions).
+- **Subagent Coordination:** `enable-subagent-hub` (gates `manage_subagents` and inter-agent message routing), `enable-teamwork-subagent`, `send-subagent-initial-prompt-as-message`.
+- **UI & Artifacts:** `jetski-generative-ui` (interactive HTML widget rendering), `enable-url-artifacts` (URL embedding in artifacts).
+- **Search & Files:** `enable-ripgrep-path-search` (native ripgrep file searching), `enable-conversation-search-v2` (searches past transcript histories), `enable-wait-tool` (deliberate turn pause/wait).
+- **State Rewind & Plugins:** `cortex-snapshot-recording` & `cortex-snapshot-revert` (checkpoint session state rewind), `enable-plugins` (customization plugin discovery).
+- **Sidecar SDK:** `enable-sidecar-sdk`, `jetski-sidecar-declared-permissions`, `sidecar-gateway` (out-of-process sidecar worker orchestration).
+
+### Dead Weight Cut (Purged Imposters & Duplicates)
+
+Configuration audits revealed that `agy.exe` exclusively parses `kebab-case` keys. Settings have been cleaned down from 93 bloated entries to 42 verified canonical flags:
+- **17 Dead & Imposter Flags Purged:** `enable-voice-activity-events` (unrelated Google Cloud Speech Protobuf field), `enable-citc-workspace-hygiene-rule` (Google-internal CitC rule), `scheduled-tasks-v2`, `sidecar-iframe-prewarm`, and unreferenced `enable-customization-kind-*` placeholders.
+- **34 Redundant `snake_case` Aliases Purged:** Removed duplicate snake_case keys (`disable_teamwork_forced_flash_model`, etc.) that bloated `settings.json`.
+
+The extra slash commands (`/swarm`, `/owl`, `/battle`, `/benchmark`, `/generative_ui`, `/compact`) come from `scripts/auto_patch_agy.py`, which patches `agy.exe` to register them. Full disassembly addresses and transcript benchmark data are documented in **[docs/ANTIGRAVITY_LAB.md](docs/ANTIGRAVITY_LAB.md)**.
 
 ---
 
