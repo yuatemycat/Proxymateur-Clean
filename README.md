@@ -253,7 +253,7 @@ Empirical verification reveals that **9 mission-critical flags** govern the core
 #### Detailed Binary Proofs & Trigger Mechanics
 
 1. **Subagent Model Preservation (`disable-teamwork-forced-flash-model`)**
-   - **Machine Proof:** In `InvokeSubagentTool.launch` (`0x14232a819`), if false or missing, execution branches to `0x14232a87f`, running `mov dword ptr [rdx+4Ch], 3` (hardcoding the enum for Gemini Flash). When `true`, this jump is bypassed, allowing subagents to inherit Pro, Ultra, or Opus tiers.
+   - **Machine Proof:** In `InvokeSubagentTool.launch` (`0x14232a819`), if false or missing, execution branches to `0x14232a87f`, running `mov dword ptr [rdx+4Ch], 3` (hardcoding the enum for Gemini Flash). When `true`, this jump is bypassed, allowing subagents to inherit Argon or Opus tiers.
    - **Observed Telemetry:** 147 of 170 spawned subagents across 472 session transcripts retained their parent tier instead of being forced to Flash.
 
 2. **On-The-Fly Tool Synthesis (`enable-programmatic-tools`)**
