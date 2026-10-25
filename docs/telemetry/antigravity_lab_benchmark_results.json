@@ -1,583 +1,510 @@
 {
-  "timestamp": "2026-10-23T23:02:49Z",
-  "duration_seconds": 7.9253,
+  "timestamp": "2026-10-25T08:13:22Z",
+  "duration_seconds": 6.6432,
   "binary_forensics": {
     "binary_exists": true,
-    "binary_size_bytes": 204027392,
+    "binary_size_bytes": 207019008,
     "image_base": "0x140000000",
     "flags_found_as_strings": 53,
     "flags_not_found": [
       "enable-voice-activity-events"
     ],
-    "native_commands_read": 12,
-    "native_commands": [
-      {
-        "index": 0,
-        "raw_offset": "0xbe58cf8",
-        "name": "goal",
-        "description": "Run until the specified goal is completely finished."
-      },
-      {
-        "index": 1,
-        "raw_offset": "0xbe58d60",
-        "name": "compact",
-        "description": "Compact the conversation now (summarize history to free up the context window)."
-      },
-      {
-        "index": 2,
-        "raw_offset": "0xbe58dc8",
-        "name": "schedule",
-        "description": "Run an instruction on a recurring schedule or as a one-time timer."
-      },
-      {
-        "index": 3,
-        "raw_offset": "0xbe58e30",
-        "name": "browser",
-        "description": "Invoke a browser agent for web tasks."
-      },
-      {
-        "index": 4,
-        "raw_offset": "0xbe58e98",
-        "name": "browser-vision",
-        "description": "[Teamfood] Invoke a browser with computer-use tools only with experimental model."
-      },
-      {
-        "index": 5,
-        "raw_offset": "0xbe58f00",
-        "name": "plan",
-        "description": "Plan carefully before executing a task."
-      },
-      {
-        "index": 6,
-        "raw_offset": "0xbe58f68",
-        "name": "grill-me",
-        "description": "Interview me to align on a plan."
-      },
-      {
-        "index": 7,
-        "raw_offset": "0xbe58fd0",
-        "name": "teamwork",
-        "description": "Invoke a team of agents to autonomously tackle large projects."
-      },
-      {
-        "index": 8,
-        "raw_offset": "0xbe59038",
-        "name": "learn",
-        "description": "Reflect on recent successes or corrections to capture reusable skills or rules."
-      },
-      {
-        "index": 9,
-        "raw_offset": "0xbe590a0",
-        "name": "boost",
-        "description": "Invoke the Boost multi-agent orchestrator for complex tasks."
-      },
-      {
-        "index": 10,
-        "raw_offset": "0xbe59108",
-        "name": "deepagent",
-        "description": "Experimental. Invoke the deep agent to plan, build, verify complex coding tasks."
-      },
-      {
-        "index": 11,
-        "raw_offset": "0xbe59170",
-        "name": "review-agent",
-        "description": "Experimental. Invoke the review agent to audit code changes, surface bugs, and verify correctness."
-      }
-    ],
+    "native_commands_read": 0,
+    "native_commands": [],
     "proxcv_commands_read": 11,
-    "proxcv_code_va": "0x14e574000",
-    "proxcv_code_raw": "0xc292600",
-    "proxcv_data_va": "0x14e574400",
-    "proxcv_data_raw": "0xc292a00",
+    "proxcv_code_va": "0x14e84e000",
+    "proxcv_code_raw": "0xc56cc00",
+    "proxcv_data_va": "0x14e84e400",
+    "proxcv_data_raw": "0xc56d000",
     "proxcv_commands": [
       {
         "index": 0,
-        "slot_va": "0x14e574400",
-        "slot_raw": "0xc292a00",
+        "slot_va": "0x14e84e400",
+        "slot_raw": "0xc56d000",
         "name": "battle",
         "description": "Colosseum Battle Mode. Competing subagents in an adversarial arena."
       },
       {
         "index": 1,
-        "slot_va": "0x14e574438",
-        "slot_raw": "0xc292a38",
+        "slot_va": "0x14e84e438",
+        "slot_raw": "0xc56d038",
         "name": "owl",
         "description": "Deep codebase investigation, iterative autonomous synthesis."
       },
       {
         "index": 2,
-        "slot_va": "0x14e574470",
-        "slot_raw": "0xc292a70",
+        "slot_va": "0x14e84e470",
+        "slot_raw": "0xc56d070",
         "name": "swarm",
         "description": "Autonomous Multi-Agent Swarm Hub. Coordinates parallel specialist subagents."
       },
       {
         "index": 3,
-        "slot_va": "0x14e5744a8",
-        "slot_raw": "0xc292aa8",
+        "slot_va": "0x14e84e4a8",
+        "slot_raw": "0xc56d0a8",
         "name": "benchmark",
         "description": "Programmatic Tool Synthesis & Performance Benchmarking."
       },
       {
         "index": 4,
-        "slot_va": "0x14e5744e0",
-        "slot_raw": "0xc292ae0",
+        "slot_va": "0x14e84e4e0",
+        "slot_raw": "0xc56d0e0",
         "name": "generative_ui",
         "description": "Render dynamic interactive UI widgets, charts, and visualizations."
       },
       {
         "index": 5,
-        "slot_va": "0x14e574518",
-        "slot_raw": "0xc292b18",
+        "slot_va": "0x14e84e518",
+        "slot_raw": "0xc56d118",
         "name": "compact",
         "description": "Compact and prune active conversation context history."
       },
       {
         "index": 6,
-        "slot_va": "0x14e574550",
-        "slot_raw": "0xc292b50",
+        "slot_va": "0x14e84e550",
+        "slot_raw": "0xc56d150",
         "name": "teamwork-preview",
         "description": "Multi-agent teamwork subagent orchestrator and parallel preview execution."
       },
       {
         "index": 7,
-        "slot_va": "0x14e574588",
-        "slot_raw": "0xc292b88",
+        "slot_va": "0x14e84e588",
+        "slot_raw": "0xc56d188",
         "name": "teamwork",
         "description": "Multi-agent teamwork subagent orchestrator (canonical alias)."
       },
       {
         "index": 8,
-        "slot_va": "0x14e5745c0",
-        "slot_raw": "0xc292bc0",
+        "slot_va": "0x14e84e5c0",
+        "slot_raw": "0xc56d1c0",
         "name": "teamwork-previews",
         "description": "Multi-agent teamwork subagent orchestrator (plural alias)."
       },
       {
         "index": 9,
-        "slot_va": "0x14e5745f8",
-        "slot_raw": "0xc292bf8",
+        "slot_va": "0x14e84e5f8",
+        "slot_raw": "0xc56d1f8",
         "name": "team",
         "description": "Multi-agent teamwork subagent orchestrator (shorthand alias)."
       },
       {
         "index": 10,
-        "slot_va": "0x14e574630",
-        "slot_raw": "0xc292c30",
+        "slot_va": "0x14e84e630",
+        "slot_raw": "0xc56d230",
         "name": "flash",
         "description": "Quick prompt execution with Gemini Flash model."
       }
     ],
-    "proxcv_marker_offset": "0xc292fda",
-    "scan_seconds": 2.5563,
+    "proxcv_marker_offset": "0xc56d5da",
+    "scan_seconds": 2.6089,
     "flag_offsets": {
       "jetski_autonomous_mode": {
         "kebab": "jetski-autonomous-mode",
         "group": "group_1_multi_agent_swarm",
-        "agy_offset": "0x3a59f1c",
+        "agy_offset": "0x3b51f8d",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a59f1c",
+        "raw_kebab": "0x3b51f8d",
         "raw_snake": null
       },
       "disable_teamwork_forced_flash_model": {
         "kebab": "disable-teamwork-forced-flash-model",
         "group": "group_1_multi_agent_swarm",
-        "agy_offset": "0x3aeda74",
+        "agy_offset": "0x3be6176",
         "matched_form": "kebab",
-        "raw_kebab": "0x3aeda74",
+        "raw_kebab": "0x3be6176",
         "raw_snake": null
       },
       "enable_subagent_hub": {
         "kebab": "enable-subagent-hub",
         "group": "group_1_multi_agent_swarm",
-        "agy_offset": "0x3a22b73",
+        "agy_offset": "0x3b1a9fe",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a22b73",
+        "raw_kebab": "0x3b1a9fe",
         "raw_snake": null
       },
       "enable_swarm_monitor": {
         "kebab": "enable-swarm-monitor",
         "group": "group_1_multi_agent_swarm",
-        "agy_offset": "0x3a36434",
+        "agy_offset": "0x3b2e396",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a36434",
+        "raw_kebab": "0x3b2e396",
         "raw_snake": null
       },
       "enable_fork_with_subagents": {
         "kebab": "enable-fork-with-subagents",
         "group": "group_1_multi_agent_swarm",
-        "agy_offset": "0x3a9617a",
+        "agy_offset": "0x3b8e3df",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a9617a",
+        "raw_kebab": "0x3b8e3df",
         "raw_snake": null
       },
       "send_subagent_initial_prompt_as_message": {
         "kebab": "send-subagent-initial-prompt-as-message",
         "group": "group_1_multi_agent_swarm",
-        "agy_offset": "0x3b0983f",
+        "agy_offset": "0x3c020b3",
         "matched_form": "kebab",
-        "raw_kebab": "0x3b0983f",
+        "raw_kebab": "0x3c020b3",
         "raw_snake": null
       },
       "enable_swarm_narrator": {
         "kebab": "enable-swarm-narrator",
         "group": "group_1_multi_agent_swarm",
-        "agy_offset": "0x3a476f5",
+        "agy_offset": "0x3b3f711",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a476f5",
+        "raw_kebab": "0x3b3f711",
         "raw_snake": null
       },
       "enable_image_generator_subagent": {
         "kebab": "enable-image-generator-subagent",
         "group": "group_1_multi_agent_swarm",
-        "agy_offset": "0x3acc025",
+        "agy_offset": "0x3bc44b1",
         "matched_form": "kebab",
-        "raw_kebab": "0x3acc025",
+        "raw_kebab": "0x3bc44b1",
         "raw_snake": null
       },
       "enable_owl_slash_command": {
         "kebab": "enable-owl-slash-command",
         "group": "group_2_deep_exploration_arena",
-        "agy_offset": "0x3a7b7e6",
+        "agy_offset": "0x3b73923",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a7b7e6",
+        "raw_kebab": "0x3b73923",
         "raw_snake": null
       },
       "enable_compact_slash_command": {
         "kebab": "enable-compact-slash-command",
         "group": "group_2_deep_exploration_arena",
-        "agy_offset": "0x3aad9c8",
+        "agy_offset": "0x3ba5cb6",
         "matched_form": "kebab",
-        "raw_kebab": "0x3aad9c8",
+        "raw_kebab": "0x3ba5cb6",
         "raw_snake": null
       },
       "enable_battle_mode": {
         "kebab": "enable-battle-mode",
         "group": "group_2_deep_exploration_arena",
-        "agy_offset": "0x3ad50c3",
+        "agy_offset": "0x3bcd58d",
         "matched_form": "kebab",
-        "raw_kebab": "0x3ad50c3",
+        "raw_kebab": "0x3bcd58d",
         "raw_snake": null
       },
       "enable_battle_mode_custom_agents": {
         "kebab": "enable-battle-mode-custom-agents",
         "group": "group_2_deep_exploration_arena",
-        "agy_offset": "0x3ad50c3",
+        "agy_offset": "0x3bcd58d",
         "matched_form": "kebab",
-        "raw_kebab": "0x3ad50c3",
+        "raw_kebab": "0x3bcd58d",
         "raw_snake": null
       },
       "enable_programmatic_tools": {
         "kebab": "enable-programmatic-tools",
         "group": "group_2_deep_exploration_arena",
-        "agy_offset": "0x3a88e31",
+        "agy_offset": "0x3b80fff",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a88e31",
+        "raw_kebab": "0x3b80fff",
         "raw_snake": null
       },
       "jetski_generative_ui": {
         "kebab": "jetski-generative-ui",
         "group": "group_2_deep_exploration_arena",
-        "agy_offset": "0x3a3433c",
+        "agy_offset": "0x3b2c262",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a3433c",
+        "raw_kebab": "0x3b2c262",
         "raw_snake": null
       },
       "enable_deepagent": {
         "kebab": "enable-deepagent",
         "group": "group_2_deep_exploration_arena",
-        "agy_offset": "0x39ebaff",
+        "agy_offset": "0x3ae37e4",
         "matched_form": "kebab",
-        "raw_kebab": "0x39ebaff",
+        "raw_kebab": "0x3ae37e4",
         "raw_snake": null
       },
       "enable_review": {
         "kebab": "enable-review",
         "group": "group_2_deep_exploration_arena",
-        "agy_offset": "0x39a9c5b",
+        "agy_offset": "0x3aa1860",
         "matched_form": "kebab",
-        "raw_kebab": "0x39a9c5b",
+        "raw_kebab": "0x3aa1860",
         "raw_snake": null
       },
       "enable_plugins": {
         "kebab": "enable-plugins",
         "group": "group_3_customizations_plugins",
-        "agy_offset": "0x39be85d",
+        "agy_offset": "0x3ab64b1",
         "matched_form": "kebab",
-        "raw_kebab": "0x39be85d",
+        "raw_kebab": "0x3ab64b1",
         "raw_snake": null
       },
       "enable_hook_status": {
         "kebab": "enable-hook-status",
         "group": "group_3_customizations_plugins",
-        "agy_offset": "0x3a10763",
+        "agy_offset": "0x3b08512",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a10763",
-        "raw_snake": "0x42246d2"
+        "raw_kebab": "0x3b08512",
+        "raw_snake": "0x4321531"
       },
       "enable_customization_kind_agent": {
         "kebab": "enable-customization-kind-agent",
         "group": "group_3_customizations_plugins",
-        "agy_offset": "0xa5b5301",
+        "agy_offset": "0xa80eb59",
         "matched_form": "kebab",
-        "raw_kebab": "0xa5b5301",
+        "raw_kebab": "0xa80eb59",
         "raw_snake": null
       },
       "enable_customization_kind_skill": {
         "kebab": "enable-customization-kind-skill",
         "group": "group_3_customizations_plugins",
-        "agy_offset": "0xa5b53e0",
+        "agy_offset": "0xa80ec38",
         "matched_form": "kebab",
-        "raw_kebab": "0xa5b53e0",
+        "raw_kebab": "0xa80ec38",
         "raw_snake": null
       },
       "enable_customization_kind_rule": {
         "kebab": "enable-customization-kind-rule",
         "group": "group_3_customizations_plugins",
-        "agy_offset": "0xa5b53b4",
+        "agy_offset": "0xa80ec0c",
         "matched_form": "kebab",
-        "raw_kebab": "0xa5b53b4",
+        "raw_kebab": "0xa80ec0c",
         "raw_snake": null
       },
       "enable_customization_kind_mcp": {
         "kebab": "enable-customization-kind-mcp",
         "group": "group_3_customizations_plugins",
-        "agy_offset": "0xa5b535b",
+        "agy_offset": "0xa80ebb3",
         "matched_form": "kebab",
-        "raw_kebab": "0xa5b535b",
+        "raw_kebab": "0xa80ebb3",
         "raw_snake": null
       },
       "enable_customization_kind_hooks": {
         "kebab": "enable-customization-kind-hooks",
         "group": "group_3_customizations_plugins",
-        "agy_offset": "0xa5b532e",
+        "agy_offset": "0xa80eb86",
         "matched_form": "kebab",
-        "raw_kebab": "0xa5b532e",
+        "raw_kebab": "0xa80eb86",
         "raw_snake": null
       },
       "deprecate_workflows": {
         "kebab": "deprecate-workflows",
         "group": "group_3_customizations_plugins",
-        "agy_offset": "0x3a24a9f",
+        "agy_offset": "0x3b1c976",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a24a9f",
+        "raw_kebab": "0x3b1c976",
         "raw_snake": null
       },
       "enable_sidecars": {
         "kebab": "enable-sidecars",
         "group": "group_4_sidecars_runtime",
-        "agy_offset": "0xa5b5577",
+        "agy_offset": "0xa80edcf",
         "matched_form": "kebab",
-        "raw_kebab": "0xa5b5577",
+        "raw_kebab": "0xa80edcf",
         "raw_snake": null
       },
       "enable_ui_sidecars": {
         "kebab": "enable-ui-sidecars",
         "group": "group_4_sidecars_runtime",
-        "agy_offset": "0x3a12305",
+        "agy_offset": "0x3b0a0ea",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a12305",
+        "raw_kebab": "0x3b0a0ea",
         "raw_snake": null
       },
       "enable_sidecar_sdk": {
         "kebab": "enable-sidecar-sdk",
         "group": "group_4_sidecars_runtime",
-        "agy_offset": "0x3a1095b",
+        "agy_offset": "0x3b0871c",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a1095b",
+        "raw_kebab": "0x3b0871c",
         "raw_snake": null
       },
       "jetski_sidecar_declared_permissions": {
         "kebab": "jetski-sidecar-declared-permissions",
         "group": "group_4_sidecars_runtime",
-        "agy_offset": "0x3aec287",
+        "agy_offset": "0x3be4966",
         "matched_form": "kebab",
-        "raw_kebab": "0x3aec287",
+        "raw_kebab": "0x3be4966",
         "raw_snake": null
       },
       "sidecar_gateway": {
         "kebab": "sidecar-gateway",
         "group": "group_4_sidecars_runtime",
-        "agy_offset": "0x39d4fd1",
+        "agy_offset": "0x3accc88",
         "matched_form": "kebab",
-        "raw_kebab": "0x39d4fd1",
+        "raw_kebab": "0x3accc88",
         "raw_snake": null
       },
       "sidecar_iframe_prewarm": {
         "kebab": "sidecar-iframe-prewarm",
         "group": "group_4_sidecars_runtime",
-        "agy_offset": "0xa5b582a",
+        "agy_offset": "0xa80f0a9",
         "matched_form": "kebab",
-        "raw_kebab": "0xa5b582a",
+        "raw_kebab": "0xa80f0a9",
         "raw_snake": null
       },
       "enable_command_assessor": {
         "kebab": "enable-command-assessor",
         "group": "group_5_deepmind_safety_guardrails",
-        "agy_offset": "0x3a6d7c5",
+        "agy_offset": "0x3b658bc",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a6d7c5",
+        "raw_kebab": "0x3b658bc",
         "raw_snake": null
       },
       "enable_command_antivirus": {
         "kebab": "enable-command-antivirus",
         "group": "group_5_deepmind_safety_guardrails",
-        "agy_offset": "0x3a7b876",
+        "agy_offset": "0x3b739b3",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a7b876",
+        "raw_kebab": "0x3b739b3",
         "raw_snake": null
       },
       "allow_experimental_monitors": {
         "kebab": "allow-experimental-monitors",
         "group": "group_5_deepmind_safety_guardrails",
-        "agy_offset": "0x3aa20e0",
+        "agy_offset": "0x3b9a361",
         "matched_form": "kebab",
-        "raw_kebab": "0x3aa20e0",
-        "raw_snake": "0x4224bcc"
+        "raw_kebab": "0x3b9a361",
+        "raw_snake": "0x4321a2b"
       },
       "enable_citc_workspace_hygiene_rule": {
         "kebab": "enable-citc-workspace-hygiene-rule",
         "group": "group_5_deepmind_safety_guardrails",
-        "agy_offset": "0x3ae63e9",
+        "agy_offset": "0x3bdea83",
         "matched_form": "kebab",
-        "raw_kebab": "0x3ae63e9",
+        "raw_kebab": "0x3bdea83",
         "raw_snake": null
       },
       "disable_stained_loas2_creds": {
         "kebab": "disable-stained-loas2-creds",
         "group": "group_5_deepmind_safety_guardrails",
-        "agy_offset": "0x3aa20aa",
+        "agy_offset": "0x3b9a32b",
         "matched_form": "kebab",
-        "raw_kebab": "0x3aa20aa",
+        "raw_kebab": "0x3b9a32b",
         "raw_snake": null
       },
       "enable_browser_subagent_v2": {
         "kebab": "enable-browser-subagent-v2",
         "group": "group_5_deepmind_safety_guardrails",
-        "agy_offset": "0x3a96112",
+        "agy_offset": "0x3b8e377",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a96112",
-        "raw_snake": "0x422aac4"
+        "raw_kebab": "0x3b8e377",
+        "raw_snake": "0x4327923"
       },
       "enable_persistent_terminals": {
         "kebab": "enable-persistent-terminals",
         "group": "group_6_terminal_resilience",
-        "agy_offset": "0x3aa2074",
+        "agy_offset": "0x3b9a2f5",
         "matched_form": "kebab",
-        "raw_kebab": "0x3aa2074",
+        "raw_kebab": "0x3b9a2f5",
         "raw_snake": null
       },
       "enable_pty": {
         "kebab": "enable-pty",
         "group": "group_6_terminal_resilience",
-        "agy_offset": "0x39599b3",
+        "agy_offset": "0x3a51483",
         "matched_form": "kebab",
-        "raw_kebab": "0x39599b3",
-        "raw_snake": "0x4227939"
+        "raw_kebab": "0x3a51483",
+        "raw_snake": "0x4324798"
       },
       "enable_ripgrep_path_search": {
         "kebab": "enable-ripgrep-path-search",
         "group": "group_6_terminal_resilience",
-        "agy_offset": "0x3a946f8",
+        "agy_offset": "0x3b8c95d",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a946f8",
+        "raw_kebab": "0x3b8c95d",
         "raw_snake": null
       },
       "enable_wait_tool": {
         "kebab": "enable-wait-tool",
         "group": "group_6_terminal_resilience",
-        "agy_offset": "0x39e9e1f",
+        "agy_offset": "0x3ae1af4",
         "matched_form": "kebab",
-        "raw_kebab": "0x39e9e1f",
+        "raw_kebab": "0x3ae1af4",
         "raw_snake": null
       },
       "scheduled_tasks_v2": {
         "kebab": "scheduled-tasks-v2",
         "group": "group_6_terminal_resilience",
-        "agy_offset": "0xa5b578f",
+        "agy_offset": "0xa80efe7",
         "matched_form": "kebab",
-        "raw_kebab": "0xa5b578f",
+        "raw_kebab": "0xa80efe7",
         "raw_snake": null
       },
       "enable_model_capacity_exhausted_retries": {
         "kebab": "enable-model-capacity-exhausted-retries",
         "group": "group_6_terminal_resilience",
-        "agy_offset": "0x3b09f8f",
+        "agy_offset": "0x3c02851",
         "matched_form": "kebab",
-        "raw_kebab": "0x3b09f8f",
+        "raw_kebab": "0x3c02851",
         "raw_snake": null
       },
       "enable_mcp_non_blocking_turn_load": {
         "kebab": "enable-mcp-non-blocking-turn-load",
         "group": "group_6_terminal_resilience",
-        "agy_offset": "0x3adde96",
+        "agy_offset": "0x3bd63c1",
         "matched_form": "kebab",
-        "raw_kebab": "0x3adde96",
+        "raw_kebab": "0x3bd63c1",
         "raw_snake": null
       },
       "enable_remote_agent_fastpush_pin": {
         "kebab": "enable-remote-agent-fastpush-pin",
         "group": "group_6_terminal_resilience",
-        "agy_offset": "0x3ad38e3",
+        "agy_offset": "0x3bcbdad",
         "matched_form": "kebab",
-        "raw_kebab": "0x3ad38e3",
+        "raw_kebab": "0x3bcbdad",
         "raw_snake": null
       },
       "cortex_snapshot_recording": {
         "kebab": "cortex-snapshot-recording",
         "group": "group_7_cortex_planning_trajectory",
-        "agy_offset": "0x3a88e95",
+        "agy_offset": "0x3b81063",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a88e95",
-        "raw_snake": "0x4224882"
+        "raw_kebab": "0x3b81063",
+        "raw_snake": "0x43216e1"
       },
       "cortex_snapshot_revert": {
         "kebab": "cortex-snapshot-revert",
         "group": "group_7_cortex_planning_trajectory",
-        "agy_offset": "0x3a59f74",
+        "agy_offset": "0x3b51fe5",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a59f74",
-        "raw_snake": "0x4224641"
+        "raw_kebab": "0x3b51fe5",
+        "raw_snake": "0x43214a0"
       },
       "enable_conversation_search_v2": {
         "kebab": "enable-conversation-search-v2",
         "group": "group_7_cortex_planning_trajectory",
-        "agy_offset": "0x3ab6a86",
+        "agy_offset": "0x3baedac",
         "matched_form": "kebab",
-        "raw_kebab": "0x3ab6a86",
+        "raw_kebab": "0x3baedac",
         "raw_snake": null
       },
       "show_model_selection_change": {
         "kebab": "show-model-selection-change",
         "group": "group_7_cortex_planning_trajectory",
-        "agy_offset": "0x3aa20c5",
+        "agy_offset": "0x3b9a346",
         "matched_form": "kebab",
-        "raw_kebab": "0x3aa20c5",
-        "raw_snake": "0x4225c4f"
+        "raw_kebab": "0x3b9a346",
+        "raw_snake": "0x4322aae"
       },
       "use_component_rewrite": {
         "kebab": "use-component-rewrite",
         "group": "group_7_cortex_planning_trajectory",
-        "agy_offset": "0x3a45832",
+        "agy_offset": "0xa80f0f1",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a45832",
+        "raw_kebab": "0xa80f0f1",
         "raw_snake": null
       },
       "use_core_direct": {
         "kebab": "use-core-direct",
         "group": "group_7_cortex_planning_trajectory",
-        "agy_offset": "0xa5b5895",
+        "agy_offset": "0xa80f114",
         "matched_form": "kebab",
-        "raw_kebab": "0xa5b5895",
-        "raw_snake": "0x42245a8"
+        "raw_kebab": "0xa80f114",
+        "raw_snake": "0x4321407"
       },
       "use_slash_plan": {
         "kebab": "use-slash-plan",
         "group": "group_7_cortex_planning_trajectory",
-        "agy_offset": "0x39bfa3f",
+        "agy_offset": "0x3ab7693",
         "matched_form": "kebab",
-        "raw_kebab": "0x39bfa3f",
-        "raw_snake": "0x422e493"
+        "raw_kebab": "0x3ab7693",
+        "raw_snake": "0x432b2f2"
       },
       "enable_voice_activity_events": {
         "kebab": "enable-voice-activity-events",
@@ -585,48 +512,48 @@
         "agy_offset": null,
         "matched_form": null,
         "raw_kebab": null,
-        "raw_snake": "0x3e4e85d"
+        "raw_snake": "0x3f49ebf"
       },
       "cascade_enable_notebook_edit_tool": {
         "kebab": "cascade-enable-notebook-edit-tool",
         "group": "group_7_cortex_planning_trajectory",
-        "agy_offset": "0x3adde54",
+        "agy_offset": "0x3bd637f",
         "matched_form": "kebab",
-        "raw_kebab": "0x3adde54",
+        "raw_kebab": "0x3bd637f",
         "raw_snake": null
       },
       "cascade_use_sed_edit_tool": {
         "kebab": "cascade-use-sed-edit-tool",
         "group": "group_7_cortex_planning_trajectory",
-        "agy_offset": "0x3a88e7c",
+        "agy_offset": "0x3b8104a",
         "matched_form": "kebab",
-        "raw_kebab": "0x3a88e7c",
+        "raw_kebab": "0x3b8104a",
         "raw_snake": null
       }
     }
   },
   "flag_matrix_and_sync": {
     "total_flags": 54,
-    "translation_ops_sec": 8562811,
+    "translation_ops_sec": 8927671,
     "regex_passes": 54,
     "regex_failures": [],
-    "settings_active_flags": 43,
+    "settings_active_flags": 38,
     "gui_active_flags": 35,
     "synced_flag_count": 35
   },
   "transcript_telemetry": {
-    "conversations_scanned": 474,
-    "lines_scanned": 179969,
-    "scan_seconds": 5.0046,
-    "scan_lines_per_sec": 35961,
-    "total_invoke_subagent_calls": 88,
-    "total_spawned_subagents": 160,
+    "conversations_scanned": 472,
+    "lines_scanned": 162684,
+    "scan_seconds": 3.6488,
+    "scan_lines_per_sec": 44586,
+    "total_invoke_subagent_calls": 98,
+    "total_spawned_subagents": 170,
     "subagent_models": {
       "flash": 23,
-      "inherit": 137
+      "inherit": 147
     },
     "subagent_typenames": {
-      "self": 130,
+      "self": 140,
       "ReadmeEngineer": 2,
       "ClaudeAgentSpecialist": 1,
       "gladiator_canvas_a": 1,
@@ -641,75 +568,76 @@
       "path_sanitizer_tests": 1
     },
     "tool_call_totals": {
-      "run_command": 40678,
-      "view_file": 19224,
-      "manage_task": 8533,
-      "write_to_file": 4181,
-      "replace_file_content": 3378,
-      "read_file": 2234,
-      "call_mcp_tool": 1542,
-      "write_file": 906,
-      "manage_subagents": 865,
-      "edit_file": 563,
-      "schedule": 273,
-      "search_web": 185,
-      "send_message": 169,
-      "invoke_subagent": 88,
+      "run_command": 35554,
+      "view_file": 15830,
+      "manage_task": 7252,
+      "read_file": 4192,
+      "write_to_file": 3474,
+      "replace_file_content": 2890,
+      "call_mcp_tool": 2123,
+      "write_file": 1726,
+      "edit_file": 1028,
+      "manage_subagents": 884,
+      "schedule": 290,
+      "search_web": 196,
+      "send_message": 181,
+      "invoke_subagent": 98,
       "grep_search": 43,
-      "read_url_content": 22,
-      "ask_question": 21,
+      "ask_question": 20,
+      "read_url_content": 18,
       "list_dir": 10,
       "define_subagent": 10,
       "tail_task_log": 4,
       "agy-context-guard:tail_task_log": 3,
       "find_by_name": 3,
+      "search_code": 1,
       "list_resources": 1,
       "generate_image": 1
     },
     "top_mcp_tools": {
-      "agy-context-guard/tail_task_log": 490,
+      "agy-context-guard/tail_task_log": 608,
+      "SuperghidraMCP/decompile_function": 276,
       "pyghidra/decompile_function": 182,
+      "SuperghidraMCP/disassemble": 132,
+      "code-review-graph/build_or_update_graph_tool": 130,
       "pyghidra/disassemble": 112,
-      "code-review-graph/build_or_update_graph_tool": 100,
-      "SuperghidraMCP/decompile_function": 89,
-      "code-review-graph/list_graph_stats_tool": 78,
-      "SuperghidraMCP/disassemble": 69,
+      "code-review-graph/list_graph_stats_tool": 97,
+      "SuperghidraMCP/list_xrefs": 61,
+      "SuperghidraMCP/list_project_binaries": 56,
       "pyghidra/read_bytes": 44,
-      "SuperghidraMCP/list_project_binaries": 41,
+      "memory/create_entities": 36,
+      "memory/add_observations": 35,
+      "SuperghidraMCP/read_bytes": 32,
       "pyghidra/list_project_binaries": 32,
-      "memory/create_entities": 31,
-      "pyghidra/list_xrefs": 26,
-      "SuperghidraMCP/list_xrefs": 22,
-      "memory/add_observations": 21,
-      "SuperghidraMCP/list_project_binary_metadata": 18
+      "SuperghidraMCP/search_symbols_by_name": 31
     },
     "workflow_comparison": {
       "/swarm": {
-        "invocations": 90,
-        "unique_sessions": 43,
-        "window_steps": 36844,
-        "avg_steps_per_invocation": 409.4,
-        "window_tool_calls": 17457,
-        "avg_tools_per_invocation": 194.0,
-        "session_steps": 51445,
-        "avg_steps_per_session": 1196.4,
-        "session_tool_calls": 24320,
-        "avg_tools_per_session": 565.6,
-        "invoke_subagent_calls": 65,
-        "spawned_subagents": 129,
-        "manage_subagents_calls": 824,
+        "invocations": 96,
+        "unique_sessions": 48,
+        "window_steps": 44173,
+        "avg_steps_per_invocation": 460.1,
+        "window_tool_calls": 20972,
+        "avg_tools_per_invocation": 218.5,
+        "session_steps": 59143,
+        "avg_steps_per_session": 1232.1,
+        "session_tool_calls": 28023,
+        "avg_tools_per_session": 583.8,
+        "invoke_subagent_calls": 74,
+        "spawned_subagents": 138,
+        "manage_subagents_calls": 840,
         "define_subagent_calls": 8,
-        "send_message_calls": 19,
+        "send_message_calls": 22,
         "ask_question_calls": 1,
         "ask_question_invocations": 1,
-        "ask_question_rate_pct": 1.1,
-        "schedule_calls": 62,
+        "ask_question_rate_pct": 1.0,
+        "schedule_calls": 114,
         "subagent_models": {
           "flash": 17,
-          "inherit": 112
+          "inherit": 121
         },
         "subagent_typenames": {
-          "self": 113,
+          "self": 122,
           "ReadmeEngineer": 2,
           "ClaudeAgentSpecialist": 1,
           "research": 5,
@@ -720,17 +648,44 @@
           "path_sanitizer_tests": 1
         }
       },
+      "/compact": {
+        "invocations": 35,
+        "unique_sessions": 23,
+        "window_steps": 11780,
+        "avg_steps_per_invocation": 336.6,
+        "window_tool_calls": 5203,
+        "avg_tools_per_invocation": 148.7,
+        "session_steps": 39012,
+        "avg_steps_per_session": 1696.2,
+        "session_tool_calls": 17949,
+        "avg_tools_per_session": 780.4,
+        "invoke_subagent_calls": 1,
+        "spawned_subagents": 1,
+        "manage_subagents_calls": 2,
+        "define_subagent_calls": 0,
+        "send_message_calls": 1,
+        "ask_question_calls": 0,
+        "ask_question_invocations": 0,
+        "ask_question_rate_pct": 0.0,
+        "schedule_calls": 20,
+        "subagent_models": {
+          "inherit": 1
+        },
+        "subagent_typenames": {
+          "self": 1
+        }
+      },
       "/owl": {
         "invocations": 32,
         "unique_sessions": 27,
-        "window_steps": 12632,
-        "avg_steps_per_invocation": 394.8,
-        "window_tool_calls": 6035,
-        "avg_tools_per_invocation": 188.6,
-        "session_steps": 20047,
-        "avg_steps_per_session": 742.5,
-        "session_tool_calls": 9464,
-        "avg_tools_per_session": 350.5,
+        "window_steps": 12713,
+        "avg_steps_per_invocation": 397.3,
+        "window_tool_calls": 6068,
+        "avg_tools_per_invocation": 189.6,
+        "session_steps": 20128,
+        "avg_steps_per_session": 745.5,
+        "session_tool_calls": 9497,
+        "avg_tools_per_session": 351.7,
         "invoke_subagent_calls": 8,
         "spawned_subagents": 9,
         "manage_subagents_calls": 12,
@@ -739,7 +694,7 @@
         "ask_question_calls": 0,
         "ask_question_invocations": 0,
         "ask_question_rate_pct": 0.0,
-        "schedule_calls": 4,
+        "schedule_calls": 6,
         "subagent_models": {
           "inherit": 9
         },
@@ -751,54 +706,31 @@
         }
       },
       "/learn": {
-        "invocations": 31,
-        "unique_sessions": 26,
-        "window_steps": 13859,
-        "avg_steps_per_invocation": 447.1,
-        "window_tool_calls": 6310,
-        "avg_tools_per_invocation": 203.5,
-        "session_steps": 37337,
-        "avg_steps_per_session": 1436.0,
-        "session_tool_calls": 17036,
-        "avg_tools_per_session": 655.2,
+        "invocations": 22,
+        "unique_sessions": 19,
+        "window_steps": 8776,
+        "avg_steps_per_invocation": 398.9,
+        "window_tool_calls": 4061,
+        "avg_tools_per_invocation": 184.6,
+        "session_steps": 27331,
+        "avg_steps_per_session": 1438.5,
+        "session_tool_calls": 12596,
+        "avg_tools_per_session": 662.9,
         "invoke_subagent_calls": 1,
         "spawned_subagents": 2,
         "manage_subagents_calls": 7,
         "define_subagent_calls": 0,
         "send_message_calls": 0,
-        "ask_question_calls": 2,
-        "ask_question_invocations": 2,
-        "ask_question_rate_pct": 6.5,
-        "schedule_calls": 22,
+        "ask_question_calls": 0,
+        "ask_question_invocations": 0,
+        "ask_question_rate_pct": 0.0,
+        "schedule_calls": 10,
         "subagent_models": {
           "inherit": 2
         },
         "subagent_typenames": {
           "research": 2
         }
-      },
-      "/compact": {
-        "invocations": 31,
-        "unique_sessions": 19,
-        "window_steps": 11772,
-        "avg_steps_per_invocation": 379.7,
-        "window_tool_calls": 5202,
-        "avg_tools_per_invocation": 167.8,
-        "session_steps": 39004,
-        "avg_steps_per_session": 2052.8,
-        "session_tool_calls": 17948,
-        "avg_tools_per_session": 944.6,
-        "invoke_subagent_calls": 0,
-        "spawned_subagents": 0,
-        "manage_subagents_calls": 2,
-        "define_subagent_calls": 0,
-        "send_message_calls": 1,
-        "ask_question_calls": 0,
-        "ask_question_invocations": 0,
-        "ask_question_rate_pct": 0.0,
-        "schedule_calls": 20,
-        "subagent_models": {},
-        "subagent_typenames": {}
       },
       "/benchmark": {
         "invocations": 11,
@@ -825,36 +757,6 @@
         },
         "subagent_typenames": {
           "milestone_worker": 3
-        }
-      },
-      "/goal": {
-        "invocations": 9,
-        "unique_sessions": 7,
-        "window_steps": 3543,
-        "avg_steps_per_invocation": 393.7,
-        "window_tool_calls": 1565,
-        "avg_tools_per_invocation": 173.9,
-        "session_steps": 12830,
-        "avg_steps_per_session": 1832.9,
-        "session_tool_calls": 5845,
-        "avg_tools_per_session": 835.0,
-        "invoke_subagent_calls": 6,
-        "spawned_subagents": 6,
-        "manage_subagents_calls": 0,
-        "define_subagent_calls": 2,
-        "send_message_calls": 0,
-        "ask_question_calls": 1,
-        "ask_question_invocations": 1,
-        "ask_question_rate_pct": 11.1,
-        "schedule_calls": 1,
-        "subagent_models": {
-          "inherit": 6
-        },
-        "subagent_typenames": {
-          "DeepCoder": 2,
-          "DeepInvestigator": 1,
-          "self": 2,
-          "research": 1
         }
       },
       "/boost": {
@@ -886,6 +788,36 @@
           "DeepCoder": 3
         }
       },
+      "/goal": {
+        "invocations": 8,
+        "unique_sessions": 6,
+        "window_steps": 2509,
+        "avg_steps_per_invocation": 313.6,
+        "window_tool_calls": 1107,
+        "avg_tools_per_invocation": 138.4,
+        "session_steps": 11074,
+        "avg_steps_per_session": 1845.7,
+        "session_tool_calls": 5123,
+        "avg_tools_per_session": 853.8,
+        "invoke_subagent_calls": 6,
+        "spawned_subagents": 6,
+        "manage_subagents_calls": 0,
+        "define_subagent_calls": 2,
+        "send_message_calls": 0,
+        "ask_question_calls": 1,
+        "ask_question_invocations": 1,
+        "ask_question_rate_pct": 12.5,
+        "schedule_calls": 0,
+        "subagent_models": {
+          "inherit": 6
+        },
+        "subagent_typenames": {
+          "DeepCoder": 2,
+          "DeepInvestigator": 1,
+          "self": 2,
+          "research": 1
+        }
+      },
       "/battle": {
         "invocations": 8,
         "unique_sessions": 7,
@@ -915,29 +847,6 @@
           "self": 2
         }
       },
-      "/plan": {
-        "invocations": 6,
-        "unique_sessions": 6,
-        "window_steps": 3397,
-        "avg_steps_per_invocation": 566.2,
-        "window_tool_calls": 1536,
-        "avg_tools_per_invocation": 256.0,
-        "session_steps": 7048,
-        "avg_steps_per_session": 1174.7,
-        "session_tool_calls": 3007,
-        "avg_tools_per_session": 501.2,
-        "invoke_subagent_calls": 0,
-        "spawned_subagents": 0,
-        "manage_subagents_calls": 0,
-        "define_subagent_calls": 0,
-        "send_message_calls": 0,
-        "ask_question_calls": 0,
-        "ask_question_invocations": 0,
-        "ask_question_rate_pct": 0.0,
-        "schedule_calls": 0,
-        "subagent_models": {},
-        "subagent_typenames": {}
-      },
       "/teamwork-preview": {
         "invocations": 5,
         "unique_sessions": 5,
@@ -965,17 +874,17 @@
           "DeepCoder": 2
         }
       },
-      "/generative_ui": {
-        "invocations": 3,
-        "unique_sessions": 3,
-        "window_steps": 125,
-        "avg_steps_per_invocation": 41.7,
-        "window_tool_calls": 50,
-        "avg_tools_per_invocation": 16.7,
-        "session_steps": 1686,
-        "avg_steps_per_session": 562.0,
-        "session_tool_calls": 745,
-        "avg_tools_per_session": 248.3,
+      "/plan": {
+        "invocations": 4,
+        "unique_sessions": 4,
+        "window_steps": 2963,
+        "avg_steps_per_invocation": 740.8,
+        "window_tool_calls": 1339,
+        "avg_tools_per_invocation": 334.8,
+        "session_steps": 4987,
+        "avg_steps_per_session": 1246.8,
+        "session_tool_calls": 2140,
+        "avg_tools_per_session": 535.0,
         "invoke_subagent_calls": 0,
         "spawned_subagents": 0,
         "manage_subagents_calls": 0,
@@ -1035,6 +944,29 @@
         "ask_question_invocations": 0,
         "ask_question_rate_pct": 0.0,
         "schedule_calls": 2,
+        "subagent_models": {},
+        "subagent_typenames": {}
+      },
+      "/generative_ui": {
+        "invocations": 2,
+        "unique_sessions": 2,
+        "window_steps": 123,
+        "avg_steps_per_invocation": 61.5,
+        "window_tool_calls": 50,
+        "avg_tools_per_invocation": 25.0,
+        "session_steps": 1684,
+        "avg_steps_per_session": 842.0,
+        "session_tool_calls": 745,
+        "avg_tools_per_session": 372.5,
+        "invoke_subagent_calls": 0,
+        "spawned_subagents": 0,
+        "manage_subagents_calls": 0,
+        "define_subagent_calls": 0,
+        "send_message_calls": 0,
+        "ask_question_calls": 0,
+        "ask_question_invocations": 0,
+        "ask_question_rate_pct": 0.0,
+        "schedule_calls": 0,
         "subagent_models": {},
         "subagent_typenames": {}
       },
