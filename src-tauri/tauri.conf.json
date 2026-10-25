@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Proxymateur-Clean",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "identifier": "com.proxymateur.clean",
   "build": {
     "beforeDevCommand": "npm run dev",

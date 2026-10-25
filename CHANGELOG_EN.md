@@ -3,6 +3,16 @@
 > Complete version history for Antigravity Tools. Return to project home at [README.md](README.md).
 
 *   **Version History**:
+    *   **v1.0.6 (2026-10-25)**:
+        -   **[Model Governance & Tier Gating] Gate Claude Models by Subscription Tier and Deduplicate Slugs**:
+            -   **Subscription Tier Isolation**: Strictly enforce Google subscription tier checks (Free vs Pro) to prevent non-entitled accounts from attempting Claude routing, eliminating persistent 403 authorization failures.
+            -   **Slug Deduplication**: Pruned duplicate model registrations from the model pool, ensuring pristine `/v1/models` advertisement.
+        -   **[Antigravity Lab Runtime Proofs & Clean Profile] Reverse-Engineered Top 9 Logic Gates & Pruned Imposter Flags**:
+            -   **Binary Assembly Verification**: Scanned and disassembled `agy.exe`, proving the 9 mission-critical runtime logic gates (Flash model downgrade bypass at `0x14232a87f`, on-the-fly programmatic tool synthesis, battle arena gate, git worktree sandboxing, DeepMind command assessor, destructive command antivirus scanner, context summary prehook, token cost accumulator, and autonomous continuous execution).
+            -   **Settings Pruning**: Purged 17 dead/imposter flags (including Google Cloud Speech protobuf leftovers and internal CitC rules) and 34 redundant `snake_case` aliases down to 42 verified canonical kebab-case flags.
+        -   **[Architecture Documentation & Resilience Topology] Mermaid System Topology and Zero-Drop Failover**:
+            -   Added Mermaid architecture flowcharts and sequence diagrams detailing multi-ingress channels, model remapping, circuit breaker account rotation, and real-time streaming failover.
+
     *   **v1.0.4 (2026-10-24)**:
         -   **[Model Governance & Visibility Parity] Fix Ghost Models and Prevent Disabled or Deleted Routes from Showing in /model Picker**:
             -   **Excised Synthetic Reasoning Variants**: Removed automatic `-high`, `-medium`, and `-low` reasoning tier generation from `openai_upstream.rs` and gateway launchers, eliminating ghost models that could not be deleted or disabled.

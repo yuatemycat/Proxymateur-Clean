@@ -296,7 +296,7 @@ const TARGET_FILES = [
         name: 'src/components/layout/MiniView.tsx',
         relPath: 'src/components/layout/MiniView.tsx',
         replace: (content) => content.replace(
-            `setAppVersion('${currentVersion}');`,
+            /setAppVersion\('[^']+'\);/,
             `setAppVersion('${newVersion}');`
         ),
     },
@@ -304,7 +304,7 @@ const TARGET_FILES = [
         name: 'src/pages/Settings.tsx',
         relPath: 'src/pages/Settings.tsx',
         replace: (content) => content.replace(
-            `useState<string>('${currentVersion}');`,
+            /useState<string>\('[^']+'\);/,
             `useState<string>('${newVersion}');`
         ),
     },
